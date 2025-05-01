@@ -1,8 +1,14 @@
-def generar_y_guardar_vectorstore():
-    from pdf_loader import cargar_contenido_pdfs
-    from embedding_service import guardar_embeddings
+from pdf_loader import cargar_contenido_pdfs
+from embedding_service import guardar_embeddings
 
-    print("📦 Generando base de datos vectorial...")
+def generar_y_guardar_vectorstore():
+    print("📄 Cargando documentos PDF...")
     documentos = cargar_contenido_pdfs("pdfs")
+
+    print(f"📦 Generando y guardando vectorstore con {len(documentos)} fragmentos...")
     guardar_embeddings(documentos, "vectorstore")
-    print(f"✅ Vectorstore creado con {len(documentos)} fragmentos.")
+    print("✅ Base de datos vectorial generada correctamente.")
+
+# Ejecutar solo si se llama directamente
+if __name__ == "__main__":
+    generar_y_guardar_vectorstore()
