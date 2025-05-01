@@ -4,3 +4,4 @@ uvicorn
 pymupdf
 python-dotenv
 tiktoken
+numpy
