@@ -53,3 +53,14 @@ Cita textualmente si es posible y di en qué reglamento o cláusula se encuentra
         temperature=0.1,
     )
     return respuesta.choices[0].message.content.strip()
+from langchain_community.vectorstores import FAISS
+from langchain_community.embeddings import OpenAIEmbeddings
+from langchain_community.document_loaders import TextLoader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+
+# Para guardar embeddings desde documentos
+def guardar_embeddings(documentos, path="vectorstore"):
+    embeddings = OpenAIEmbeddings()
+    vectorstore = FAISS.from_documents(documentos, embeddings)
+    vectorstore.save_local(path)
+    print(f"✅ Embeddings guardados en '{path}'")
