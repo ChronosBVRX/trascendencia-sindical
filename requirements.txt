@@ -6,4 +6,5 @@ python-dotenv
 tiktoken
 numpy
 langchain
+langchain-community
 
