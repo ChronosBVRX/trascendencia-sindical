@@ -1,45 +1,36 @@
 import os
-if not os.path.exists("vectorstore/index.faiss"):
-    from generar_vectorstore import generar_y_guardar_vectorstore
-    generar_y_guardar_vectorstore()
-from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from embedding_service import load_embeddings, buscar_respuesta
-from dotenv import load_dotenv
-import os
-
-load_dotenv()
+from generar_vectorstore import generar_y_guardar_vectorstore
 
 app = FastAPI()
+vectorstore = None
 
-# CORS para que funcione desde tu frontend
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # o especifica ["https://tuweb.com"]
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Modelo para recibir preguntas
+class PreguntaInput(BaseModel):
+    pregunta: str
 
-# Cargar los embeddings una sola vez al iniciar
-print("📦 Cargando base de datos vectorial...")
-vectorstore = load_embeddings("vectorstore")
-print(f"✅ {len(vectorstore)} fragmentos cargados.")
+@app.on_event("startup")
+def cargar_vectorstore():
+    global vectorstore
+    if not os.path.exists("vectorstore/index.faiss") or not os.path.exists("vectorstore/index.pkl"):
+        print("⚠️ No se encontró vectorstore, generando uno nuevo...")
+        generar_y_guardar_vectorstore()
 
-class Solicitud(BaseModel):
-    nombre: str
-    cargo: str
-    destinatario: str
-    problema: str
-    peticion: str
-
-@app.post("/generar-escrito")
-async def generar_escrito(solicitud: Solicitud):
+    print("📦 Cargando base de datos vectorial...")
     try:
-        pregunta = f"{solicitud.problema}\n\n{solicitud.peticion}"
-        respuesta = buscar_respuesta(pregunta, vectorstore)
-        return {"texto": respuesta}
+        vectorstore = load_embeddings("vectorstore")
+        print("✅ Vectorstore cargado con éxito.")
     except Exception as e:
-        print(f"💥 Error en /generar-escrito: {e}")
-        return {"texto": "Ocurrió un error al generar tu respuesta. Intenta más tarde o revisa tu conexión."}
+        print(f"❌ Error al cargar vectorstore: {e}")
+        raise e
+
+@app.post("/preguntar")
+def responder_pregunta(datos: PreguntaInput):
+    global vectorstore
+    if not vectorstore:
+        raise HTTPException(status_code=500, detail="Vectorstore no está disponible.")
+    
+    respuesta = buscar_respuesta(datos.pregunta, vectorstore)
+    return {"respuesta": respuesta}
