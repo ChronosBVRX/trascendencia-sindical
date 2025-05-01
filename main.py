@@ -1,3 +1,6 @@
+if not os.path.exists("vectorstore/index.faiss"):
+    from generar_vectorstore import generar_y_guardar_vectorstore
+    generar_y_guardar_vectorstore()
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
