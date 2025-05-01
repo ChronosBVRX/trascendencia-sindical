@@ -1,61 +1,41 @@
+# embedding_service.py
+
 import os
+import openai
 import pickle
-import numpy as np
-from openai import OpenAI
-from dotenv import load_dotenv
-import tiktoken
+from langchain.vectorstores import FAISS
 
-load_dotenv()
-openai = OpenAI()
+# Para cargar embeddings desde disco
+def load_embeddings(path="vectorstore/index"):
+    with open(f"{path}/index.faiss", "rb") as f1, open(f"{path}/index.pkl", "rb") as f2:
+        index = pickle.load(f2)
+        faiss_obj = FAISS.load_local(path, index)
+        return faiss_obj
 
-# Carga y decodificación del texto
-def generar_embedding(texto):
-    response = openai.embeddings.create(
-        input=[texto],
-        model="text-embedding-3-small"
-    )
-    return np.array(response.data[0].embedding)
+# Para buscar respuesta basada en una pregunta
+def buscar_respuesta(pregunta, vectorstore):
+    documentos_relacionados = vectorstore.similarity_search(pregunta, k=4)
+    contexto = "\n\n".join([doc.page_content for doc in documentos_relacionados])
 
-def guardar_embeddings(documentos, carpeta_destino):
-    if not os.path.exists(carpeta_destino):
-        os.makedirs(carpeta_destino)
+    prompt = f"""
+Eres TrascendencIA Sindical, un asistente experto en el Contrato Colectivo de Trabajo del IMSS.
 
-    for i, doc in enumerate(documentos):
-        embedding = generar_embedding(doc["contenido"])
-        with open(os.path.join(carpeta_destino, f"vector_{i}.pkl"), "wb") as f:
-            pickle.dump({
-                "embedding": embedding,
-                "contenido": doc["contenido"],
-                "origen": doc["origen"]
-            }, f)
+Tu trabajo es responder **únicamente con base en el contenido textual del contrato** incluido a continuación. 
+No inventes cláusulas ni interpretes. Si no puedes citar una cláusula, responde que no la encontraste.
 
-def load_embeddings(carpeta_origen):
-    vectores = []
-    for archivo in os.listdir(carpeta_origen):
-        if archivo.endswith(".pkl"):
-            with open(os.path.join(carpeta_origen, archivo), "rb") as f:
-                vectores.append(pickle.load(f))
-    return vectores
+=== CONTENIDO DEL CONTRATO ===
+{contexto}
 
-def buscar_respuesta(pregunta, embeddings, k=3):
-    pregunta_emb = generar_embedding(pregunta)
-    similitudes = []
+=== PREGUNTA ===
+{pregunta}
 
-    for doc in embeddings:
-        distancia = np.dot(pregunta_emb, doc["embedding"])
-        similitudes.append((distancia, doc))
-
-    similitudes.sort(reverse=True, key=lambda x: x[0])
-    mejores = similitudes[:k]
-
-    contexto = "\n\n".join([m[1]["contenido"] for m in mejores])
+=== RESPUESTA ===
+Cita textualmente si es posible y di en qué reglamento o cláusula se encuentra. Si no puedes encontrarlo, indícalo con claridad.
+"""
 
     respuesta = openai.chat.completions.create(
-        model="gpt-4",
-        messages=[
-            {"role": "system", "content": "Eres un asesor sindical experto en el contrato colectivo del IMSS. Responde de forma profesional y amable, citando siempre que sea posible el contenido original del contrato."},
-            {"role": "user", "content": f"Con base en el siguiente contexto:\n\n{contexto}\n\nResponde a esta pregunta:\n{pregunta}"}
-        ]
+        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.1,
     )
-
     return respuesta.choices[0].message.content.strip()
