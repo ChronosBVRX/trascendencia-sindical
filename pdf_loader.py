@@ -2,23 +2,14 @@ from langchain_core.documents import Document
 import os
 import fitz  # pymupdf
 
-def cargar_contenido_pdfs(carpeta_pdf):
+def cargar_contenido_pdfs(directorio="pdfs"):
     documentos = []
-
-    for archivo in os.listdir(carpeta_pdf):
+    for archivo in os.listdir(directorio):
         if archivo.endswith(".pdf"):
-            ruta = os.path.join(carpeta_pdf, archivo)
-            texto = extraer_texto_pdf(ruta)
-            fragmentos = dividir_texto_en_fragmentos(texto, max_palabras=300)
-
-            for frag in fragmentos:
-                documentos.append({
-                    "contenido": frag,
-                    "origen": archivo
-                })
-
+            path = os.path.join(directorio, archivo)
+            texto = extraer_texto_pdf(path)  # Usa aquí tu método para leer texto
+            documentos.append(Document(page_content=texto, metadata={"fuente": archivo}))
     return documentos
-
 
 def extraer_texto_pdf(ruta_pdf):
     texto = ""
