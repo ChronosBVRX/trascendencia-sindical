@@ -1,16 +1,30 @@
-# embedding_service.py
-
 import os
 import openai
 import pickle
-from langchain.vectorstores import FAISS
+from langchain_community.vectorstores import FAISS
+from langchain_community.embeddings import OpenAIEmbeddings
 
 # Para cargar embeddings desde disco
-def load_embeddings(path="vectorstore/index"):
+def load_embeddings(path="vectorstore"):
     with open(f"{path}/index.faiss", "rb") as f1, open(f"{path}/index.pkl", "rb") as f2:
-        index = pickle.load(f2)
-        faiss_obj = FAISS.load_local(path, index)
-        return faiss_obj
+        index = pickle.load(f1)
+        vectorstore = pickle.load(f2)
+        vectorstore.index = index
+        return vectorstore
+
+# Para guardar embeddings desde documentos
+def guardar_embeddings(documentos, path="vectorstore"):
+    embeddings = OpenAIEmbeddings()
+    vectorstore = FAISS.from_documents(documentos, embeddings)
+
+    if not os.path.exists(path):
+        os.makedirs(path)
+
+    with open(f"{path}/index.faiss", "wb") as f1, open(f"{path}/index.pkl", "wb") as f2:
+        pickle.dump(vectorstore.index, f1)
+        pickle.dump(vectorstore, f2)
+
+    print(f"✅ Vectorstore guardado en {path}")
 
 # Para buscar respuesta basada en una pregunta
 def buscar_respuesta(pregunta, vectorstore):
