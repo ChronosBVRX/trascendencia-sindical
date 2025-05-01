@@ -1,3 +1,4 @@
+import os
 if not os.path.exists("vectorstore/index.faiss"):
     from generar_vectorstore import generar_y_guardar_vectorstore
     generar_y_guardar_vectorstore()
