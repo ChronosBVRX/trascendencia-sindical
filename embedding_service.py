@@ -1,56 +1,61 @@
-import openai
-import json
 import os
+import pickle
 import numpy as np
+from openai import OpenAI
 from dotenv import load_dotenv
+import tiktoken
 
 load_dotenv()
-openai.api_key = os.getenv("OPENAI_API_KEY")
+openai = OpenAI()
 
-def get_embedding(texto):
-    res = openai.embeddings.create(
-        model="text-embedding-3-small",
-        input=texto
+# Carga y decodificación del texto
+def generar_embedding(texto):
+    response = openai.embeddings.create(
+        input=[texto],
+        model="text-embedding-3-small"
     )
-    return res.data[0].embedding
+    return np.array(response.data[0].embedding)
 
-def load_embeddings():
-    with open("fragmentos.json", "r", encoding="utf-8") as f:
-        fragmentos = json.load(f)
+def guardar_embeddings(documentos, carpeta_destino):
+    if not os.path.exists(carpeta_destino):
+        os.makedirs(carpeta_destino)
+
+    for i, doc in enumerate(documentos):
+        embedding = generar_embedding(doc["contenido"])
+        with open(os.path.join(carpeta_destino, f"vector_{i}.pkl"), "wb") as f:
+            pickle.dump({
+                "embedding": embedding,
+                "contenido": doc["contenido"],
+                "origen": doc["origen"]
+            }, f)
+
+def load_embeddings(carpeta_origen):
     vectores = []
-    for frag in fragmentos:
-        embedding = get_embedding(frag["contenido"])
-        vectores.append({
-            "origen": frag["origen"],
-            "contenido": frag["contenido"],
-            "embedding": embedding
-        })
-    with open("vector_data.json", "w", encoding="utf-8") as f:
-        json.dump(vectores, f, ensure_ascii=False)
+    for archivo in os.listdir(carpeta_origen):
+        if archivo.endswith(".pkl"):
+            with open(os.path.join(carpeta_origen, archivo), "rb") as f:
+                vectores.append(pickle.load(f))
+    return vectores
 
-def cosine_similarity(a, b):
-    a, b = np.array(a), np.array(b)
-    return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
+def buscar_respuesta(pregunta, embeddings, k=3):
+    pregunta_emb = generar_embedding(pregunta)
+    similitudes = []
 
-def buscar_respuesta(pregunta):
-    pregunta_embedding = get_embedding(pregunta)
-    with open("vector_data.json", "r", encoding="utf-8") as f:
-        vectores = json.load(f)
+    for doc in embeddings:
+        distancia = np.dot(pregunta_emb, doc["embedding"])
+        similitudes.append((distancia, doc))
 
-    mejor = max(vectores, key=lambda x: cosine_similarity(pregunta_embedding, x["embedding"]))
-    contexto = f'Fuente: {mejor["origen"]}\nContenido:\n{mejor["contenido"][:2000]}'
+    similitudes.sort(reverse=True, key=lambda x: x[0])
+    mejores = similitudes[:k]
 
-    prompt = f"""Eres TrascendencIA Sindical, experto en contrato colectivo y reglamentos laborales del IMSS.
-Basándote en el siguiente fragmento responde con lenguaje profesional y cálido. Cita el origen del contenido.
-
-{contexto}
-
-Pregunta: {pregunta}"""
+    contexto = "\n\n".join([m[1]["contenido"] for m in mejores])
 
     respuesta = openai.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[{ "role": "user", "content": prompt }],
-        temperature=0.5
+        model="gpt-4",
+        messages=[
+            {"role": "system", "content": "Eres un asesor sindical experto en el contrato colectivo del IMSS. Responde de forma profesional y amable, citando siempre que sea posible el contenido original del contrato."},
+            {"role": "user", "content": f"Con base en el siguiente contexto:\n\n{contexto}\n\nResponde a esta pregunta:\n{pregunta}"}
+        ]
     )
 
-    return respuesta.choices[0].message.content
+    return respuesta.choices[0].message.content.strip()
