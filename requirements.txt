@@ -5,3 +5,5 @@ pymupdf
 python-dotenv
 tiktoken
 numpy
+langchain
+
