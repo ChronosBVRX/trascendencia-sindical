@@ -13,20 +13,29 @@ def load_embeddings(path="vectorstore"):
         return vectorstore
 
 # Para guardar embeddings desde documentos
-def guardar_embeddings(documentos, path="vectorstore"):
+def guardar_embeddings(documentos, path):
+    from langchain_community.vectorstores import FAISS
+    from langchain_community.embeddings import OpenAIEmbeddings
+
     embeddings = OpenAIEmbeddings()
-    vectorstore = FAISS.from_documents(documentos, embeddings)
+    texts = [d.page_content for d in documentos]
+    metadatas = [d.metadata for d in documentos]
 
-    if not os.path.exists(path):
-        os.makedirs(path)
+    # Lote de procesamiento (por ejemplo, 100 documentos por vez)
+    chunk_size = 100
+    vectorstore = None
 
-    with open(f"{path}/index.faiss", "wb") as f1, open(f"{path}/index.pkl", "wb") as f2:
-        pickle.dump(vectorstore.index, f1)
-        pickle.dump(vectorstore, f2)
+    for i in range(0, len(texts), chunk_size):
+        chunk_texts = texts[i:i + chunk_size]
+        chunk_metadatas = metadatas[i:i + chunk_size]
+        partial_vs = FAISS.from_texts(chunk_texts, embeddings, metadatas=chunk_metadatas)
+        if vectorstore is None:
+            vectorstore = partial_vs
+        else:
+            vectorstore.merge_from(partial_vs)
 
-    print(f"✅ Vectorstore guardado en {path}")
+    vectorstore.save_local(path)
 
-# Para buscar respuesta basada en una pregunta
 def buscar_respuesta(pregunta, vectorstore):
     documentos_relacionados = vectorstore.similarity_search(pregunta, k=4)
     contexto = "\n\n".join([doc.page_content for doc in documentos_relacionados])
