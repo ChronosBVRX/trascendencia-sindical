@@ -1,30 +1,30 @@
-1. **Ubicación**: `project/main.py`
-2. **Contenido completo**:
 ```python
+# main.py
 from fastapi import FastAPI
+from dotenv import load_dotenv
 import os
 
-# Importa las funciones que creamos en embedding_service.py
+# Carga variables de entorno
+load_dotenv()
+
+# Importa funciones de embedding_service
 from embedding_service import generar_y_guardar_vectorstore, consulta_contrato
 
-# Crea la aplicación FastAPI
 app = FastAPI()
 
-# Rutas donde se guardan los archivos generados
-VECTORSTORE_PATH = "vectorstore/index.faiss"
-PICKLE_PATH = "vectorstore/index.pkl"
+# Rutas de los archivos de índice
+VECTORSTORE_PATH = "../vectorstore/index.faiss"
+PICKLE_PATH = "../vectorstore/index.pkl"
 
 @app.on_event("startup")
 def startup_event():
-    # Al inicio, verifica si existen los archivos de índice
+    # Si no existen, crea el índice desde PDFs
     if not os.path.exists(VECTORSTORE_PATH) or not os.path.exists(PICKLE_PATH):
-        # Si faltan, crea el vectorstore desde los PDFs
         generar_y_guardar_vectorstore()
 
 @app.post("/consulta")
-def consultar_contrato(payload: dict):
-    # Espera un JSON con la clave "texto"
+def endpoint_consulta(payload: dict):
     pregunta = payload.get("texto", "")
-    # Llama a la función que busca y responde
     respuesta = consulta_contrato(pregunta)
     return {"respuesta": respuesta}
+```
