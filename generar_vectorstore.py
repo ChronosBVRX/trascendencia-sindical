@@ -1,6 +1,15 @@
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from pdf_loader import cargar_contenido_pdfs
-from embedding_service import guardar_embeddings
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from embedding_service import guardar_embeddings, cargar_documentos
+
+def generar_y_guardar_vectorstore():
+    documentos = cargar_documentos("pdfs")  # o el nombre de tu carpeta
+    splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+    documentos_divididos = splitter.split_documents(documentos)
+    
+    print(f"Se dividieron {len(documentos)} documentos en {len(documentos_divididos)} fragmentos.")
+    guardar_embeddings(documentos_divididos, "vectorstore")
 
 def dividir_documentos(documentos):
     text_splitter = RecursiveCharacterTextSplitter(
