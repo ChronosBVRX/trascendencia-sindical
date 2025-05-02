@@ -5,7 +5,7 @@ import fitz       # PyMuPDF para leer PDFs
 import pickle     # Para serializar el objeto FAISS
 from dotenv import load_dotenv
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.embeddings import OpenAIEmbeddings
+from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
 
 # Carga variables de entorno, especialmente OPENAI_API_KEY
