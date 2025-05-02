@@ -1,36 +1,30 @@
+1. **Ubicación**: `project/main.py`
+2. **Contenido completo**:
+```python
+from fastapi import FastAPI
 import os
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from embedding_service import load_embeddings, buscar_respuesta
-from generar_vectorstore import generar_y_guardar_vectorstore
 
+# Importa las funciones que creamos en embedding_service.py
+from embedding_service import generar_y_guardar_vectorstore, consulta_contrato
+
+# Crea la aplicación FastAPI
 app = FastAPI()
-vectorstore = None
 
-# Modelo para recibir preguntas
-class PreguntaInput(BaseModel):
-    pregunta: str
+# Rutas donde se guardan los archivos generados
+VECTORSTORE_PATH = "vectorstore/index.faiss"
+PICKLE_PATH = "vectorstore/index.pkl"
 
 @app.on_event("startup")
-def cargar_vectorstore():
-    global vectorstore
-    if not os.path.exists("vectorstore/index.faiss") or not os.path.exists("vectorstore/index.pkl"):
-        print("⚠️ No se encontró vectorstore, generando uno nuevo...")
+def startup_event():
+    # Al inicio, verifica si existen los archivos de índice
+    if not os.path.exists(VECTORSTORE_PATH) or not os.path.exists(PICKLE_PATH):
+        # Si faltan, crea el vectorstore desde los PDFs
         generar_y_guardar_vectorstore()
 
-    print("📦 Cargando base de datos vectorial...")
-    try:
-        vectorstore = load_embeddings("vectorstore")
-        print("✅ Vectorstore cargado con éxito.")
-    except Exception as e:
-        print(f"❌ Error al cargar vectorstore: {e}")
-        raise e
-
-@app.post("/preguntar")
-def responder_pregunta(datos: PreguntaInput):
-    global vectorstore
-    if not vectorstore:
-        raise HTTPException(status_code=500, detail="Vectorstore no está disponible.")
-    
-    respuesta = buscar_respuesta(datos.pregunta, vectorstore)
+@app.post("/consulta")
+def consultar_contrato(payload: dict):
+    # Espera un JSON con la clave "texto"
+    pregunta = payload.get("texto", "")
+    # Llama a la función que busca y responde
+    respuesta = consulta_contrato(pregunta)
     return {"respuesta": respuesta}
