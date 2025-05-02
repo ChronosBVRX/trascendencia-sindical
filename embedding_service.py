@@ -1,26 +1,23 @@
-# embedding_service.py
-
 import os
-import fitz       # PyMuPDF para leer PDFs
-import pickle     # Para serializar el objeto FAISS
+import fitz                        # PyMuPDF para leer PDFs
 from dotenv import load_dotenv
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
 
-# Carga variables de entorno, especialmente OPENAI_API_KEY
+# Carga tu OPENAI_API_KEY desde .env
 load_dotenv()
 
-# Rutas: asumimos que pdfs/ y vectorstore/ están junto a este archivo
-HERE                = os.path.dirname(os.path.abspath(__file__))
-PDF_FOLDER          = os.path.join(HERE, "pdfs")
-VECTORSTORE_FOLDER  = os.path.join(HERE, "vectorstore")
-PICKLE_PATH         = os.path.join(VECTORSTORE_FOLDER, "index.pkl")
+# Carpeta donde están tus PDFs (junto a este archivo)
+HERE       = os.path.dirname(os.path.abspath(__file__))
+PDF_FOLDER = os.path.join(HERE, "pdfs")
 
+# Variable global para el vectorstore en memoria
+_VECTORSTORE_DB = None
 
 def cargar_pdfs() -> list[str]:
     """
-    Lee todos los PDFs de la carpeta 'pdfs/' y devuelve una lista con su texto completo.
+    Lee todos los PDFs de pdfs/ y devuelve una lista de textos.
     """
     textos = []
     for nombre in os.listdir(PDF_FOLDER):
@@ -31,64 +28,47 @@ def cargar_pdfs() -> list[str]:
             textos.append(contenido)
     return textos
 
+def build_vectorstore():
+    """
+    Crea el FAISS vectorstore en memoria a partir de los PDFs.
+    """
+    global _VECTORSTORE_DB
 
-def generar_y_guardar_vectorstore() -> None:
-    """
-    1) Carga los PDFs
-    2) Divide el texto en fragments (chunks)
-    3) Genera embeddings con OpenAI
-    4) Crea y guarda el índice FAISS en disk
-    5) Serializa opcionalmente con pickle
-    """
-    # 1) Cargar textos
     textos = cargar_pdfs()
-
-    # 2) Chunking
     splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
     docs = []
     for texto in textos:
         docs.extend(splitter.create_documents([texto]))
 
-    # 3) Embeddings
     embeddings = OpenAIEmbeddings()
+    _VECTORSTORE_DB = FAISS.from_documents(docs, embeddings)
 
-    # 4) Generar FAISS
-    db = FAISS.from_documents(docs, embeddings)
-
-    # Asegurar carpeta
-    os.makedirs(VECTORSTORE_FOLDER, exist_ok=True)
-
-    # Guardar FAISS en disk
-    db.save_local(VECTORSTORE_FOLDER)
-
-    # 5) Serializar con pickle (por si lo necesitas)
-    with open(PICKLE_PATH, "wb") as f:
-        pickle.dump(db, f)
-
+def generar_y_guardar_vectorstore() -> None:
+    """
+    Inicializa el vectorstore en memoria.
+    (Ya no guarda nada en disco.)
+    """
+    build_vectorstore()
 
 def consulta_contrato(pregunta: str) -> str:
     """
-    1) Carga el índice FAISS
-    2) Busca los 5 documentos más similares
-    3) Concatena su texto como contexto
-    4) Genera una respuesta con ChatOpenAI usando ese contexto
+    Busca en el vectorstore en memoria y genera la respuesta.
     """
-    # Cargar FAISS
-    embeddings = OpenAIEmbeddings()
-    db = FAISS.load_local(VECTORSTORE_FOLDER, embeddings)
+    global _VECTORSTORE_DB
+    if _VECTORSTORE_DB is None:
+        build_vectorstore()
 
-    # Similarity search
+    db = _VECTORSTORE_DB
     top_docs = db.similarity_search(pregunta, k=5)
     context = "\n".join(doc.page_content for doc in top_docs)
 
-    # Generar respuesta
+    # Genera la respuesta con ChatOpenAI
     from langchain.chat_models import ChatOpenAI
     from langchain.schema import SystemMessage, HumanMessage
 
     chat = ChatOpenAI(temperature=0)
     messages = [
-        SystemMessage(content="Eres un asistente que ayuda a trabajadores del IMSS a consultar su contrato colectivo."),
+        SystemMessage(content="Eres un asistente que ayuda a trabajadores del IMSS a consultar su contrato colectivo de trabajo."),
         HumanMessage(content=f"Contexto:\n{context}\nPregunta: {pregunta}")
     ]
-    respuesta = chat(messages).content
-    return respuesta
+    return chat(messages).content
