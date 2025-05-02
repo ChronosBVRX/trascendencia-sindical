@@ -5,6 +5,11 @@ from dotenv import load_dotenv
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.embeddings import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
+# …tus imports…
+HERE = os.path.dirname(os.path.abspath(__file__))
+PDF_FOLDER        = os.path.join(HERE, "pdfs")        # si pdfs/ está junto a embedding_service.py
+VECTORSTORE_FOLDER = os.path.join(HERE, "vectorstore")
+PICKLE_PATH        = os.path.join(VECTORSTORE_FOLDER, "index.pkl")
 
 # Carga clave de API
 load_dotenv()
