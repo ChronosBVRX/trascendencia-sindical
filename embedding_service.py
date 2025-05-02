@@ -14,9 +14,9 @@ def load_embeddings(path="vectorstore"):
 
 # Para guardar embeddings desde documentos
 def guardar_embeddings(documentos, path):
-    from langchain_community.vectorstores import FAISS
-    from langchain_community.embeddings import OpenAIEmbeddings
-
+    embeddings = OpenAIEmbeddings()
+    vectorstore = FAISS.from_documents(documentos, embeddings)
+    
     embeddings = OpenAIEmbeddings()
     texts = [d.page_content for d in documentos]
     metadatas = [d.metadata for d in documentos]
