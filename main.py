@@ -1,6 +1,21 @@
 from fastapi import FastAPI
 from dotenv import load_dotenv
 import os
+import fitz
+import pickle
+from dotenv import load_dotenv
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_community.vectorstores import FAISS
+from langchain_community.embeddings import OpenAIEmbeddings  # fija el import
+
+load_dotenv()
+
+# Aseguramos usar la carpeta donde arranca uvicorn (pwd)
+BASE = os.getcwd()
+
+PDF_FOLDER = os.path.join(BASE, "pdfs")
+VECTORSTORE_FOLDER = os.path.join(BASE, "vectorstore")
+PICKLE_PATH = os.path.join(VECTORSTORE_FOLDER, "index.pkl")
 
 # Carga variables de entorno desde .env
 load_dotenv()
