@@ -1,10 +1,8 @@
-openai
 fastapi
 uvicorn
-pymupdf
-python-dotenv
-tiktoken
-numpy
+pymupdf        # fitz
 langchain
 langchain-community
-
+openai
+faiss-cpu
+python-dotenv
