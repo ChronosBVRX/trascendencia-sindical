@@ -3,6 +3,8 @@ uvicorn
 pymupdf
 langchain
 langchain-community
+langchain-openai
 openai
 faiss-cpu
 python-dotenv
+tiktoken
