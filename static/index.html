@@ -100,18 +100,24 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ texto: pregunta })
         });
+        // Si el status no es 2xx, lanzar error para catch(...)
+        if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
         const data = await res.json();
         if (data.respuesta) {
           appendMessage('bot', data.respuesta);
+        } else if (data.error) {
+          appendMessage('bot', `⚠️ ${data.error}`);
         } else {
-          appendMessage('bot', '❌ Error del servidor');
+          appendMessage('bot', '❌ Respuesta inesperada del servidor');
         }
-      } catch {
-        appendMessage('bot', '❌ No se pudo conectar al servidor');
+      } catch (err) {
+        console.error("Fetch error:", err);
+        appendMessage('bot', `❌ Error del servidor: ${err.message}`);
       }
       btnEl.disabled = false;
     };
 
+    // Enviar con Enter
     txtEl.addEventListener('keypress', e => {
       if (e.key === 'Enter') btnEl.click();
     });
