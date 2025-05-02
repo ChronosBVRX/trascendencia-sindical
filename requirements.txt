@@ -1,6 +1,6 @@
 fastapi
 uvicorn
-pymupdf        # fitz
+pymupdf
 langchain
 langchain-community
 openai
