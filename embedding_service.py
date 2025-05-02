@@ -1,20 +1,18 @@
-```python
-# embedding_service.py
 import os
 import fitz
 import pickle
+from dotenv import load_dotenv
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.embeddings import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
-from dotenv import load_dotenv
 
-# Carga API key
+# Carga clave de API
 load_dotenv()
 
-# Configuración de rutas
+# Rutas relativas
 ROOT = os.path.dirname(__file__)
-PDF_FOLDER = os.path.join(ROOT, "..", "pdfs")
-VECTORSTORE_FOLDER = os.path.join(ROOT, "..", "vectorstore")
+PDF_FOLDER = os.path.abspath(os.path.join(ROOT, "..", "pdfs"))
+VECTORSTORE_FOLDER = os.path.abspath(os.path.join(ROOT, "..", "vectorstore"))
 PICKLE_PATH = os.path.join(VECTORSTORE_FOLDER, "index.pkl")
 
 
@@ -58,6 +56,3 @@ def consulta_contrato(pregunta: str) -> str:
         HumanMessage(content=f"Contexto:\n{context}\nPregunta: {pregunta}")
     ]
     return chat(msgs).content
-```
-
----
