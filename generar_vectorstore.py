@@ -10,7 +10,7 @@ def dividir_documentos(documentos):
     )
     return text_splitter.split_documents(documentos)
 
-ef generar_y_guardar_vectorstore():
+def generar_y_guardar_vectorstore():
     documentos = cargar_documentos()  # o cargar_tus_docs(), etc.
     documentos_divididos = dividir_documentos(documentos)
     guardar_embeddings(documentos_divididos, "vectorstore")
