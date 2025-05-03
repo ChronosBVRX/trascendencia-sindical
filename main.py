@@ -19,17 +19,17 @@ app.mount(
     name="static"
 )
 
-# Sirve la UI en GET /
+# GET / → index.html
 @app.get("/")
 async def index():
     return FileResponse(os.path.join(BASE, "static", "index.html"))
 
-# Atiende también HEAD / para que no devuelva 405
+# HEAD / → también sirve index.html para no 405
 @app.head("/")
 async def head_index():
     return FileResponse(os.path.join(BASE, "static", "index.html"))
 
-# Pydantic schemas para validar la petición
+# Esquema de mensajes para el historial
 class Message(BaseModel):
     role: Literal["user", "assistant"]
     content: str
@@ -37,14 +37,14 @@ class Message(BaseModel):
 class ConsultaRequest(BaseModel):
     history: List[Message]
 
-# Endpoint /consulta
+# POST /consulta
 @app.post("/consulta")
 async def endpoint_consulta(req: ConsultaRequest):
     history = req.history
     if not history:
         return {"respuesta": "❗ No recibí ninguna pregunta. ¿En qué puedo ayudar?"}
 
-    # Saludo puro
+    # Si solo saludan, presentación experta
     if len(history) == 1 and history[0].role == "user":
         saludo = history[0].content.strip()
         if re.match(r'^(hola|buenos días|buenas tardes|buenas noches|hey|qué tal)\s*$', saludo, re.I):
@@ -66,12 +66,13 @@ async def endpoint_consulta(req: ConsultaRequest):
         return {"respuesta": "❗ No pude encontrar tu pregunta en el historial."}
 
     try:
+        # Pasa también el historial convertido a dicts
         respuesta = consulta_contrato(question, [h.dict() for h in history])
         return {"respuesta": respuesta}
     except Exception as e:
-        return {"error": f"¡Uy! Error interno: {e}"}
+        return {"error": f"¡Uy! Ocurrió un error interno: {e}"}
 
-# Al arrancar, generamos vectorstore si falta
+# Startup: genera vectorstore si falta
 VECTORSTORE_DIR  = os.path.join(BASE, "vectorstore")
 VECTORSTORE_PATH = os.path.join(VECTORSTORE_DIR, "index.faiss")
 PICKLE_PATH      = os.path.join(VECTORSTORE_DIR, "index.pkl")
