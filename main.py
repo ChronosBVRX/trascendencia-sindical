@@ -12,19 +12,24 @@ load_dotenv()
 app = FastAPI()
 BASE = os.getcwd()
 
-# Montamos estáticos en /static
+# Monta estáticos en /static
 app.mount(
     "/static",
     StaticFiles(directory=os.path.join(BASE, "static")),
     name="static"
 )
 
-# Sirve la UI
+# Sirve la UI en GET /
 @app.get("/")
 async def index():
     return FileResponse(os.path.join(BASE, "static", "index.html"))
 
-# Modelos Pydantic para validar la petición
+# Atiende también HEAD / para que no devuelva 405
+@app.head("/")
+async def head_index():
+    return FileResponse(os.path.join(BASE, "static", "index.html"))
+
+# Pydantic schemas para validar la petición
 class Message(BaseModel):
     role: Literal["user", "assistant"]
     content: str
@@ -32,13 +37,14 @@ class Message(BaseModel):
 class ConsultaRequest(BaseModel):
     history: List[Message]
 
+# Endpoint /consulta
 @app.post("/consulta")
 async def endpoint_consulta(req: ConsultaRequest):
     history = req.history
     if not history:
         return {"respuesta": "❗ No recibí ninguna pregunta. ¿En qué puedo ayudar?"}
 
-    # Si el usuario solo saludó, devolvemos la presentación experta
+    # Saludo puro
     if len(history) == 1 and history[0].role == "user":
         saludo = history[0].content.strip()
         if re.match(r'^(hola|buenos días|buenas tardes|buenas noches|hey|qué tal)\s*$', saludo, re.I):
@@ -49,9 +55,8 @@ async def endpoint_consulta(req: ConsultaRequest):
                 )
             }
 
-    # El “question” es el último mensaje del usuario
+    # Extrae la última pregunta del usuario
     question = None
-    # Encuentra el último mensaje con role="user"
     for msg in reversed(history):
         if msg.role == "user":
             question = msg.content.strip()
@@ -61,7 +66,7 @@ async def endpoint_consulta(req: ConsultaRequest):
         return {"respuesta": "❗ No pude encontrar tu pregunta en el historial."}
 
     try:
-        respuesta = consulta_contrato(question, history)
+        respuesta = consulta_contrato(question, [h.dict() for h in history])
         return {"respuesta": respuesta}
     except Exception as e:
         return {"error": f"¡Uy! Error interno: {e}"}
