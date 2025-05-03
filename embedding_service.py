@@ -44,17 +44,19 @@ def consulta_contrato(pregunta: str) -> str:
         allow_dangerous_deserialization=True
     )
 
-    # Buscamos los 5 fragmentos más relevantes
+    # Recupera los 5 fragmentos más relevantes
     top_docs = db.similarity_search(pregunta, k=5)
     context = "\n".join(f"— Fragmento:\n{d.page_content}" for d in top_docs)
 
-    # Prompt reforzado con tono conversacional
+    # Prompt reforzado para incluir la sección del contrato
     SYSTEM_PROMPT = """
 Eres un asistente legal especializado en el Contrato Colectivo de Trabajo del IMSS.
-Habla siempre de forma conversacional, cálida y natural, como si platicaras con un colega.
-– RESPONDE solo con información que aparezca LITERALMENTE en el contexto.
-– INDICA el número exacto de la cláusula y EXTRAÉ el texto tal cual.
-– Si NO localizas la referencia exacta, responde «No se encontró referencia exacta en el contrato.»
+Habla de forma conversacional y calurosa. Cuando extraigas información:
+1) Indica la **sección** del contrato (por ejemplo "Reglamento Interior de Trabajo").
+2) Indica el **número exacto** de la cláusula o artículo.
+3) EXTRAÉ el texto **tal cual** aparece en el contexto.
+4) Si NO localizas la referencia exacta, responde:
+   «No se encontró referencia exacta en el contrato.»
 """
 
     from langchain.chat_models import ChatOpenAI
