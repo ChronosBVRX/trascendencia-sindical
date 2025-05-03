@@ -1,8 +1,10 @@
 import os
 import re
+from typing import List, Literal
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 from dotenv import load_dotenv
 from embedding_service import generar_y_guardar_vectorstore, consulta_contrato
 
@@ -10,7 +12,7 @@ load_dotenv()
 app = FastAPI()
 BASE = os.getcwd()
 
-# Monta /static para el front
+# Montamos estáticos en /static
 app.mount(
     "/static",
     StaticFiles(directory=os.path.join(BASE, "static")),
@@ -22,26 +24,49 @@ app.mount(
 async def index():
     return FileResponse(os.path.join(BASE, "static", "index.html"))
 
-# POST /consulta con detección de saludo solo para saludos puros
+# Modelos Pydantic para validar la petición
+class Message(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str
+
+class ConsultaRequest(BaseModel):
+    history: List[Message]
+
 @app.post("/consulta")
-async def endpoint_consulta(payload: dict):
-    pregunta = (payload.get("texto") or "").strip()
-    if not pregunta:
-        return {"respuesta": "❗ No recibí ninguna pregunta. ¿En qué puedo ayudarte?"}
+async def endpoint_consulta(req: ConsultaRequest):
+    history = req.history
+    if not history:
+        return {"respuesta": "❗ No recibí ninguna pregunta. ¿En qué puedo ayudar?"}
 
-    # Detectar saludo puro (solo "hola", "buenos días", etc.)
-    saludo_pattern = r'^(hola|buenos días|buenas tardes|buenas noches|hey)\b'
-    if re.match(saludo_pattern, pregunta, re.I):
-        return {"respuesta": "¡Hola! 😊 ¿Cómo estás? ¿En qué te puedo ayudar hoy con tu Contrato Colectivo del IMSS?"}
+    # Si el usuario solo saludó, devolvemos la presentación experta
+    if len(history) == 1 and history[0].role == "user":
+        saludo = history[0].content.strip()
+        if re.match(r'^(hola|buenos días|buenas tardes|buenas noches|hey|qué tal)\s*$', saludo, re.I):
+            return {
+                "respuesta": (
+                    "¡Hola! 👋 Soy tu asistente experto en temas contractuales y sindicales del IMSS. "
+                    "Listo para ayudarte con cualquier consulta de tu Contrato Colectivo. ¿En qué puedo servirte hoy?"
+                )
+            }
 
-    # Para cualquier otra cosa, vamos directo a la consulta contractual
+    # El “question” es el último mensaje del usuario
+    question = None
+    # Encuentra el último mensaje con role="user"
+    for msg in reversed(history):
+        if msg.role == "user":
+            question = msg.content.strip()
+            break
+
+    if not question:
+        return {"respuesta": "❗ No pude encontrar tu pregunta en el historial."}
+
     try:
-        respuesta = consulta_contrato(pregunta)
+        respuesta = consulta_contrato(question, history)
         return {"respuesta": respuesta}
     except Exception as e:
-        return {"error": f"¡Uy! Tuve un error interno: {e}"}
+        return {"error": f"¡Uy! Error interno: {e}"}
 
-# Startup: genera el vectorstore si hace falta
+# Al arrancar, generamos vectorstore si falta
 VECTORSTORE_DIR  = os.path.join(BASE, "vectorstore")
 VECTORSTORE_PATH = os.path.join(VECTORSTORE_DIR, "index.faiss")
 PICKLE_PATH      = os.path.join(VECTORSTORE_DIR, "index.pkl")
