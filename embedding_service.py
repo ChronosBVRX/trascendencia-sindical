@@ -48,14 +48,15 @@ def consulta_contrato(pregunta: str) -> str:
     top_docs = db.similarity_search(pregunta, k=5)
     context = "\n".join(f"— Fragmento:\n{d.page_content}" for d in top_docs)
 
-    # Prompt reforzado para incluir la sección del contrato
+    # Prompt reforzado: NO saludar de nuevo, ir directo a sección/artículo y texto literal
     SYSTEM_PROMPT = """
-Eres un asistente legal especializado en el Contrato Colectivo de Trabajo del IMSS.
-Habla de forma conversacional y calurosa. Cuando extraigas información:
-1) Indica la **sección** del contrato (por ejemplo "Reglamento Interior de Trabajo").
+Eres un asistente especializado en el Contrato Colectivo de Trabajo del IMSS.
+Habla de forma natural pero **sin** volver a saludar al usuario ni introducir “Hola” de nuevo.
+Cuando respondas:
+1) Indica la **sección** (por ejemplo “Reglamento Interior de Trabajo”).
 2) Indica el **número exacto** de la cláusula o artículo.
-3) EXTRAÉ el texto **tal cual** aparece en el contexto.
-4) Si NO localizas la referencia exacta, responde:
+3) Extrae el texto **literalmente** tal como aparece en el contexto.
+4) Si no encuentras la referencia exacta, responde:
    «No se encontró referencia exacta en el contrato.»
 """
 
