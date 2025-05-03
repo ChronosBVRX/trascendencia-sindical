@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
-from langchain.chat_models import ChatOpenAI
+from langchain_community.chat_models import ChatOpenAI   # <-- importa de langchain_community
 from langchain.schema import SystemMessage, HumanMessage, AIMessage
 
 load_dotenv()
@@ -37,7 +37,6 @@ def generar_y_guardar_vectorstore() -> None:
 
 
 def consulta_contrato(question: str, history: List[dict]) -> str:
-    # 1) Carga FAISS
     embeddings = OpenAIEmbeddings()
     db = FAISS.load_local(
         VECTORSTORE_FOLDER,
@@ -45,32 +44,29 @@ def consulta_contrato(question: str, history: List[dict]) -> str:
         allow_dangerous_deserialization=True
     )
 
-    # 2) Recupera top-5 fragmentos
     top_docs = db.similarity_search(question, k=5)
-    context = "\n".join(f"— Fragmento:\n{d.page_content}" for d in top_docs)
+    contexto = "\n".join(f"— Fragmento:\n{d.page_content}" for d in top_docs)
 
-    # 3) Arma lista de mensajes conservando el hilo
-    messages = [SystemMessage(content="""
+    system_prompt = """
 Eres un asistente experto en el Contrato Colectivo de Trabajo del IMSS.
 Habla de forma creativa y natural, como si conversases con un colega.
-Cuando cites:
-- Menciona la sección (ej. \"Reglamento Interior de Trabajo\").
-- Indica el número exacto de cláusula/artículo.
-- Extrae el texto **literalmente**.
-- No inventes referencias; si no existe, di «No se encontró referencia exacta en el contrato.»
-""".strip())]
+Al responder:
+1) Menciona la sección (ej. "Reglamento Interior de Trabajo").
+2) Indica el número exacto de cláusula o artículo.
+3) Extrae el texto literalmente tal como aparece.
+4) Si no localizas la referencia exacta, di «No se encontró referencia exacta en el contrato.»
+"""
 
-    # Reconstruye el diálogo previo
+    # Reconstruye conversación previa
+    messages = [SystemMessage(content=system_prompt)]
     for msg in history:
-        if msg['role'] == 'user':
-            messages.append(HumanMessage(content=msg['content']))
+        if msg["role"] == "user":
+            messages.append(HumanMessage(content=msg["content"]))
         else:
-            messages.append(AIMessage(content=msg['content']))
+            messages.append(AIMessage(content=msg["content"]))
 
-    # Añade el contexto y la pregunta actual
-    messages.append(HumanMessage(content=f"Contexto:\n{context}\n\nPregunta: {question}"))
+    # Añade contexto y la pregunta actual
+    messages.append(HumanMessage(content=f"Contexto:\n{contexto}\n\nPregunta: {question}"))
 
-    # 4) Llamada al modelo
     chat = ChatOpenAI(temperature=0.4)
-    respuesta = chat(messages).content
-    return respuesta
+    return chat(messages).content
