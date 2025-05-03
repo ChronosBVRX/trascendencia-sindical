@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
-from langchain_community.chat_models import ChatOpenAI   # <-- importa de langchain_community
+from langchain_community.chat_models import ChatOpenAI
 from langchain.schema import SystemMessage, HumanMessage, AIMessage
 
 load_dotenv()
@@ -37,6 +37,7 @@ def generar_y_guardar_vectorstore() -> None:
 
 
 def consulta_contrato(question: str, history: List[dict]) -> str:
+    # Carga FAISS con deserialización permitida
     embeddings = OpenAIEmbeddings()
     db = FAISS.load_local(
         VECTORSTORE_FOLDER,
@@ -44,9 +45,11 @@ def consulta_contrato(question: str, history: List[dict]) -> str:
         allow_dangerous_deserialization=True
     )
 
-    top_docs = db.similarity_search(question, k=5)
-    contexto = "\n".join(f"— Fragmento:\n{d.page_content}" for d in top_docs)
+    # Top 5 fragmentos
+    resultados = db.similarity_search(question, k=5)
+    contexto = "\n".join(f"— Fragmento:\n{d.page_content}" for d in resultados)
 
+    # Prompt reforzado
     system_prompt = """
 Eres un asistente experto en el Contrato Colectivo de Trabajo del IMSS.
 Habla de forma creativa y natural, como si conversases con un colega.
@@ -55,9 +58,9 @@ Al responder:
 2) Indica el número exacto de cláusula o artículo.
 3) Extrae el texto literalmente tal como aparece.
 4) Si no localizas la referencia exacta, di «No se encontró referencia exacta en el contrato.»
-"""
+""".strip()
 
-    # Reconstruye conversación previa
+    # Reconstruye el diálogo previo
     messages = [SystemMessage(content=system_prompt)]
     for msg in history:
         if msg["role"] == "user":
@@ -65,8 +68,9 @@ Al responder:
         else:
             messages.append(AIMessage(content=msg["content"]))
 
-    # Añade contexto y la pregunta actual
+    # Añade contexto y pregunta actual
     messages.append(HumanMessage(content=f"Contexto:\n{contexto}\n\nPregunta: {question}"))
 
     chat = ChatOpenAI(temperature=0.4)
-    return chat(messages).content
+    respuesta = chat(messages).content
+    return respuesta
