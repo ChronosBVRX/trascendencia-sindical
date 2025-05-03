@@ -8,41 +8,40 @@ from embedding_service import generar_y_guardar_vectorstore, consulta_contrato
 
 load_dotenv()
 app = FastAPI()
-
 BASE = os.getcwd()
 
-# Monta los estáticos
+# Monta /static para el front
 app.mount(
     "/static",
     StaticFiles(directory=os.path.join(BASE, "static")),
     name="static"
 )
 
-# Sirve index.html en la raíz
+# Sirve la UI
 @app.get("/")
 async def index():
     return FileResponse(os.path.join(BASE, "static", "index.html"))
 
-# Endpoint de consulta
+# POST /consulta con detección de saludo solo para saludos puros
 @app.post("/consulta")
 async def endpoint_consulta(payload: dict):
     pregunta = (payload.get("texto") or "").strip()
     if not pregunta:
-        return {"respuesta": "❗ Oops, parece que no escribiste nada. ¿En qué puedo ayudarte?"}
+        return {"respuesta": "❗ No recibí ninguna pregunta. ¿En qué puedo ayudarte?"}
 
-    # 1) Detección de saludos genéricos
-    saludo_pattern = r'^(hola|buenos días|buenas tardes|buenas noches|qué tal|hey)\b'
+    # Detectar saludo puro (solo "hola", "buenos días", etc.)
+    saludo_pattern = r'^(hola|buenos días|buenas tardes|buenas noches|hey)\b'
     if re.match(saludo_pattern, pregunta, re.I):
-        return {"respuesta": "¡Hola! 😊 ¿Cómo estás? ¿En qué te puedo apoyar hoy con tu Contrato Colectivo del IMSS?"}
+        return {"respuesta": "¡Hola! 😊 ¿Cómo estás? ¿En qué te puedo ayudar hoy con tu Contrato Colectivo del IMSS?"}
 
-    # 2) Pasar a consulta de cláusulas
+    # Para cualquier otra cosa, vamos directo a la consulta contractual
     try:
         respuesta = consulta_contrato(pregunta)
         return {"respuesta": respuesta}
     except Exception as e:
         return {"error": f"¡Uy! Tuve un error interno: {e}"}
 
-# Startup: genera vectorstore si falta
+# Startup: genera el vectorstore si hace falta
 VECTORSTORE_DIR  = os.path.join(BASE, "vectorstore")
 VECTORSTORE_PATH = os.path.join(VECTORSTORE_DIR, "index.faiss")
 PICKLE_PATH      = os.path.join(VECTORSTORE_DIR, "index.pkl")
