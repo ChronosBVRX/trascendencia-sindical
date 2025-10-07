@@ -24,11 +24,7 @@
       --accent-soft: rgba(0, 224, 255, 0.16);
       --font-main: 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
     }
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       min-height: 100vh;
       background: var(--bg-gradient);
@@ -61,6 +57,8 @@
       border: 1px solid rgba(0, 221, 255, 0.07);
       mix-blend-mode: screen;
     }
+
+    /* Header */
     header {
       padding: 1.25rem 1.75rem 1rem;
       border-bottom: 1px solid var(--accent-soft);
@@ -69,6 +67,7 @@
       justify-content: space-between;
       align-items: center;
       position: relative;
+      gap: 1.5rem; /* mantenemos el gap de la rama codex */
     }
     header::after {
       content: "";
@@ -79,6 +78,12 @@
       background: var(--header-gradient);
       opacity: 0.9;
     }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
     .title {
       font-size: 1.15rem;
       letter-spacing: 0.06em;
@@ -96,12 +101,42 @@
       background: var(--accent);
       box-shadow: 0 0 12px rgba(0, 224, 255, 0.85);
     }
+
+    /* Botón Volver (glassmórfico) */
+    .back-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.55rem 1.1rem;
+      border-radius: 999px;
+      border: 1px solid rgba(0, 224, 255, 0.25);
+      background: rgba(4, 24, 43, 0.6);
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 0.9rem;
+      letter-spacing: 0.04em;
+      transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+      box-shadow: 0 10px 25px rgba(0, 174, 255, 0.18);
+    }
+    .back-button::before {
+      content: '←';
+      font-size: 1rem;
+    }
+    .back-button:hover {
+      transform: translateY(-1px);
+      border-color: rgba(0, 224, 255, 0.45);
+      box-shadow: 0 14px 28px rgba(0, 224, 255, 0.3);
+    }
+    .back-button:active { transform: translateY(0); }
+
     .subtitle {
       font-size: 0.9rem;
       opacity: 0.7;
       letter-spacing: 0.18em;
       text-transform: uppercase;
     }
+
+    /* Chat */
     #chat-container {
       flex: 1;
       overflow-y: auto;
@@ -110,12 +145,8 @@
       flex-direction: column;
       gap: 1rem;
     }
-    #chat-container::-webkit-scrollbar {
-      width: 8px;
-    }
-    #chat-container::-webkit-scrollbar-track {
-      background: rgba(255, 255, 255, 0.04);
-    }
+    #chat-container::-webkit-scrollbar { width: 8px; }
+    #chat-container::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.04); }
     #chat-container::-webkit-scrollbar-thumb {
       background: linear-gradient(180deg, rgba(0, 224, 255, 0.45), rgba(0, 112, 255, 0.4));
       border-radius: 999px;
@@ -126,10 +157,7 @@
       margin-bottom: 1rem;
       max-width: 80%;
     }
-    .message.user {
-      margin-left: auto;
-      flex-direction: row-reverse;
-    }
+    .message.user { margin-left: auto; flex-direction: row-reverse; }
     .avatar {
       width: 32px;
       height: 32px;
@@ -174,6 +202,8 @@
       border-top: 8px solid var(--bot-bg);
       border-right: 8px solid transparent;
     }
+
+    /* Input */
     #input-area {
       display: flex;
       border-top: 1px solid var(--border);
@@ -208,51 +238,44 @@
       transform: translateY(-1px);
       box-shadow: 0 18px 30px rgba(0, 224, 255, 0.45);
     }
-    #enviar:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
+    #enviar:disabled { opacity: 0.5; cursor: not-allowed; }
     #texto:focus {
       border-color: rgba(0, 224, 255, 0.45);
       box-shadow: 0 0 0 3px rgba(0, 224, 255, 0.12);
     }
+
+    /* Responsive */
     @media (max-width: 768px) {
-      body {
-        padding: 1.5rem 1rem;
-      }
-      #app {
-        height: calc(100vh - 3rem);
-        border-radius: 20px;
-      }
-      header {
-        padding: 1rem 1.25rem 0.9rem;
-      }
-      #chat-container {
-        padding: 1.25rem;
-      }
-      #input-area {
-        flex-direction: column;
-        padding: 0.75rem 1rem 1.1rem;
-      }
-      #enviar {
-        width: 100%;
-        padding: 0.95rem;
-      }
+      body { padding: 1.5rem 1rem; }
+      #app { height: calc(100vh - 3rem); border-radius: 20px; }
+      header { padding: 1rem 1.25rem 0.9rem; flex-direction: column; align-items: stretch; gap: 1rem; }
+      .header-left { flex-direction: column; align-items: flex-start; gap: 0.75rem; width: 100%; }
+      .subtitle { align-self: flex-end; }
+      .back-button { width: 100%; justify-content: center; }
+      #chat-container { padding: 1.25rem; }
+      #input-area { flex-direction: column; padding: 0.75rem 1rem 1.1rem; }
+      #enviar { width: 100%; padding: 0.95rem; }
     }
   </style>
 </head>
 <body>
   <div id="app">
     <header>
-      <div class="title">TrascendencIA Sindical</div>
+      <div class="header-left">
+        <a class="back-button" href="https://chronosbvrx.github.io/InnovacionSindical/" target="_self" rel="noopener">Volver</a>
+        <div class="title">TrascendencIA Sindical</div>
+      </div>
       <div class="subtitle">Innovación Sindical</div>
     </header>
+
     <div id="chat-container"></div>
+
     <div id="input-area">
       <input id="texto" placeholder="Escribe tu consulta..." autocomplete="off"/>
       <button id="enviar">Enviar</button>
     </div>
   </div>
+
   <script>
     const chatEl = document.getElementById('chat-container');
     const txtEl  = document.getElementById('texto');
