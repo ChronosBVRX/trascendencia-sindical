@@ -10,3 +10,4 @@ python-dotenv
 tiktoken
 duckduckgo-search
 langchain-text-splitters
+langgraph
