@@ -8,11 +8,10 @@ from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_community.vectorstores import FAISS
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 
-# Nuevas importaciones para el Agente y las Herramientas
+# Importaciones actualizadas: La forma moderna con LangGraph
 from langchain_core.tools import create_retriever_tool
 from langchain_community.tools import DuckDuckGoSearchResults
-from langchain.agents import AgentExecutor, create_openai_tools_agent
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langgraph.prebuilt import create_react_agent
 
 load_dotenv()
 
@@ -20,11 +19,8 @@ HERE               = os.path.dirname(os.path.abspath(__file__))
 PDF_FOLDER         = os.path.join(HERE, "pdfs")
 VECTORSTORE_FOLDER = os.path.join(HERE, "vectorstore")
 
-
 def cargar_pdfs() -> List[str]:
-    """
-    Lee todos los PDFs de /pdfs y devuelve una lista con todo su texto.
-    """
+    """Lee todos los PDFs de /pdfs y devuelve una lista con todo su texto."""
     textos = []
     for fname in os.listdir(PDF_FOLDER):
         if fname.lower().endswith(".pdf"):
@@ -33,16 +29,9 @@ def cargar_pdfs() -> List[str]:
             textos.append(contenido)
     return textos
 
-
 def generar_y_guardar_vectorstore() -> None:
-    """
-    1) Carga los PDFs
-    2) Divide el texto en trozos
-    3) Genera embeddings y construye FAISS
-    4) Guarda el índice en disco
-    """
+    """Carga PDFs, divide texto, genera embeddings y guarda FAISS."""
     textos = cargar_pdfs()
-    # Se mantiene el tamaño de chunk que tenías, es adecuado para textos legales
     splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
     docs = []
     for t in textos:
@@ -53,15 +42,10 @@ def generar_y_guardar_vectorstore() -> None:
     db = FAISS.from_documents(docs, embeddings)
     db.save_local(VECTORSTORE_FOLDER)
 
-
 def consulta_contrato(question: str, history: List[dict]) -> str:
-    """
-    1) Corrige ortografía de la pregunta
-    2) Configura herramientas (FAISS y Buscador web)
-    3) Ejecuta el Agente para responder con precisión
-    """
+    """Corrige ortografía, configura herramientas y ejecuta el Agente LangGraph."""
+    
     # --- 1) CORRECCIÓN ORTOGRÁFICA SILENCIOSA ---
-    # Usamos invoke() que es el método actualizado en LangChain
     ortho_model = ChatOpenAI(temperature=0)
     ortho_msgs = [
         SystemMessage(content=(
@@ -80,17 +64,14 @@ def consulta_contrato(question: str, history: List[dict]) -> str:
         embeddings,
         allow_dangerous_deserialization=True
     )
-    # Convertimos FAISS en un recuperador (retriever)
     retriever = db.as_retriever(search_kwargs={"k": 5})
     
-    # Herramienta 1: Base de datos interna (CCT)
     herramienta_cct = create_retriever_tool(
         retriever,
         "buscar_contrato_colectivo",
         "Usa ESTA herramienta SIEMPRE en primer lugar para buscar sobre derechos, obligaciones, cláusulas o reglamentos del IMSS."
     )
 
-    # Herramienta 2: Buscador en Internet (Leyes externas)
     herramienta_internet = DuckDuckGoSearchResults(
         name="buscar_leyes_externas",
         description="Usa esta herramienta ÚNICAMENTE si el usuario pregunta específicamente por leyes externas como la Ley Federal del Trabajo, Ley General de Salud, o la Constitución Mexicana."
@@ -98,9 +79,8 @@ def consulta_contrato(question: str, history: List[dict]) -> str:
 
     tools = [herramienta_cct, herramienta_internet]
 
-    # --- 3) PROMPT DEL AGENTE ---
-    prompt_agente = ChatPromptTemplate.from_messages([
-        ("system", """
+    # --- 3) PROMPT DEL SISTEMA ---
+    system_message = """
 Eres un asesor legal laboral experto en el Contrato Colectivo de Trabajo (CCT) del IMSS y sus reglamentos.
 Tu objetivo es ayudar a los trabajadores respondiendo sus dudas de forma clara, precisa y directa.
 
@@ -111,34 +91,30 @@ REGLAS ESTRICTAS DE RESPUESTA:
 4. CITAS PRECISAS: Siempre que fundamentes tu respuesta, cita la fuente exacta (Ej. «Cláusula X del CCT» o «Artículo X de la LFT»).
 5. FORMATO: Responde de forma concisa. Usa un máximo de tres viñetas o ideas breves en un lenguaje accesible.
 6. TONO: Mantén un tono profesional, institucional pero empático y cercano.
-"""),
-        MessagesPlaceholder(variable_name="chat_history"),
-        ("user", "{input}"),
-        MessagesPlaceholder(variable_name="agent_scratchpad"),
-    ])
+"""
 
-    # --- 4) PREPARAR EL HISTORIAL ---
-    # Convertimos los diccionarios que vienen de main.py a objetos Message de LangChain
+    # --- 4) PREPARAR EL HISTORIAL PARA LANGGRAPH ---
     chat_history = []
-    for msg in history:
+    # Pasamos todo el historial excepto la última pregunta sin corregir
+    for msg in history[:-1]:
         if msg["role"] == "user":
             chat_history.append(HumanMessage(content=msg["content"]))
         else:
             chat_history.append(AIMessage(content=msg["content"]))
+            
+    # Añadimos la pregunta ya corregida al final del historial
+    chat_history.append(HumanMessage(content=question_corr))
 
-    # --- 5) EJECUCIÓN DEL AGENTE ---
-    # gpt-4o-mini es excelente y muy económico para seguir instrucciones de herramientas
+    # --- 5) EJECUCIÓN DEL AGENTE CON LANGGRAPH ---
     llm = ChatOpenAI(temperature=0.2, model="gpt-4o-mini") 
-    agent = create_openai_tools_agent(llm, tools, prompt_agente)
     
-    # verbose=False para no saturar los logs de Render, puedes cambiar a True si necesitas depurar
-    agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=False)
+    # LangGraph es la forma moderna y recomendada de crear agentes
+    agent_executor = create_react_agent(llm, tools, state_modifier=system_message)
 
     try:
-        resultado = agent_executor.invoke({
-            "input": question_corr,
-            "chat_history": chat_history
-        })
-        return resultado["output"]
+        # LangGraph requiere un diccionario con la clave "messages"
+        resultado = agent_executor.invoke({"messages": chat_history})
+        # El resultado devuelve toda la lista de mensajes, tomamos el último (la respuesta final de la IA)
+        return resultado["messages"][-1].content
     except Exception as e:
         return f"Lo siento, hubo un problema al consultar los documentos: {str(e)}"
