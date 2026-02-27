@@ -8,3 +8,4 @@ openai
 faiss-cpu
 python-dotenv
 tiktoken
+duckduckgo-search
