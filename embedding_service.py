@@ -8,7 +8,7 @@ from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_community.vectorstores import FAISS
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 
-# Importaciones actualizadas: La forma moderna con LangGraph
+# Importaciones modernas para Herramientas y LangGraph
 from langchain_core.tools import create_retriever_tool
 from langchain_community.tools import DuckDuckGoSearchResults
 from langgraph.prebuilt import create_react_agent
@@ -108,13 +108,15 @@ REGLAS ESTRICTAS DE RESPUESTA:
     # --- 5) EJECUCIÓN DEL AGENTE CON LANGGRAPH ---
     llm = ChatOpenAI(temperature=0.2, model="gpt-4o-mini") 
     
-    # LangGraph es la forma moderna y recomendada de crear agentes
-    agent_executor = create_react_agent(llm, tools, state_modifier=system_message)
+    # Creamos el agente SIN el parámetro problemático
+    agent_executor = create_react_agent(llm, tools)
+
+    # Insertamos las reglas maestras (system_message) al mero inicio del historial
+    mensajes_finales = [SystemMessage(content=system_message)] + chat_history
 
     try:
-        # LangGraph requiere un diccionario con la clave "messages"
-        resultado = agent_executor.invoke({"messages": chat_history})
-        # El resultado devuelve toda la lista de mensajes, tomamos el último (la respuesta final de la IA)
+        # Le pasamos la lista completa al agente
+        resultado = agent_executor.invoke({"messages": mensajes_finales})
         return resultado["messages"][-1].content
     except Exception as e:
         return f"Lo siento, hubo un problema al consultar los documentos: {str(e)}"
