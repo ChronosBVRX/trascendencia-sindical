@@ -1,16 +1,33 @@
 import os
 import re
 from typing import List, Literal
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from dotenv import load_dotenv
+
+# Importamos la lógica de IA desde tu servicio de embeddings
 from embedding_service import generar_y_guardar_vectorstore, consulta_contrato
 
 load_dotenv()
-app = FastAPI()
 BASE = os.getcwd()
+VECTORSTORE_DIR  = os.path.join(BASE, "vectorstore")
+VECTORSTORE_PATH = os.path.join(VECTORSTORE_DIR, "index.faiss")
+PICKLE_PATH      = os.path.join(VECTORSTORE_DIR, "index.pkl")
+
+# --- MANEJO MODERNO DEL INICIO DE LA APP ---
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Se ejecuta al arrancar el servidor
+    if not os.path.exists(VECTORSTORE_PATH) or not os.path.exists(PICKLE_PATH):
+        print("Vectorstore no encontrado. Generando uno nuevo a partir de los PDFs...")
+        generar_y_guardar_vectorstore()
+    yield
+    # Aquí iría el código de apagado si en el futuro necesitas limpiar recursos
+
+app = FastAPI(lifespan=lifespan)
 
 # Monta estáticos en /static
 app.mount(
@@ -66,18 +83,12 @@ async def endpoint_consulta(req: ConsultaRequest):
         return {"respuesta": "❗ No pude encontrar tu pregunta en el historial."}
 
     try:
-        # Pasa también el historial convertido a dicts
-        respuesta = consulta_contrato(question, [h.dict() for h in history])
+        # Pasa el historial convertido a diccionarios usando el método moderno de Pydantic
+        historial_dicts = [h.model_dump() if hasattr(h, 'model_dump') else h.dict() for h in history]
+        
+        # Llama a la cadena RAG estricta
+        respuesta = consulta_contrato(question, historial_dicts)
         return {"respuesta": respuesta}
+        
     except Exception as e:
-        return {"error": f"¡Uy! Ocurrió un error interno: {e}"}
-
-# Startup: genera vectorstore si falta
-VECTORSTORE_DIR  = os.path.join(BASE, "vectorstore")
-VECTORSTORE_PATH = os.path.join(VECTORSTORE_DIR, "index.faiss")
-PICKLE_PATH      = os.path.join(VECTORSTORE_DIR, "index.pkl")
-
-@app.on_event("startup")
-def startup_event():
-    if not os.path.exists(VECTORSTORE_PATH) or not os.path.exists(PICKLE_PATH):
-        generar_y_guardar_vectorstore()
+        return {"error": f"¡Uy! Ocurrió un error interno: {str(e)}"}
