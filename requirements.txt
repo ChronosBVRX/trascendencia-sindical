@@ -8,6 +8,4 @@ openai
 faiss-cpu
 python-dotenv
 tiktoken
-ddgs
 langchain-text-splitters
-langgraph
