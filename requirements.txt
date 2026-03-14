@@ -9,3 +9,5 @@ faiss-cpu
 python-dotenv
 tiktoken
 langchain-text-splitters
+langgraph
+duckduckgo-search
