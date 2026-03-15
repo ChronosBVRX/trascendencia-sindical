@@ -6,12 +6,11 @@ from dotenv import load_dotenv
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_community.vectorstores import FAISS
-from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain.chains import create_retrieval_chain
-from langchain.chains.history_aware_retriever import create_history_aware_retriever
-from langchain.chains.combine_documents import create_stuff_documents_chain
+# --- IMPORTACIONES MODERNAS (Adiós a langchain.chains) ---
+from langchain_core.tools import create_retriever_tool
+from langgraph.prebuilt import create_react_agent
 
 load_dotenv()
 
@@ -63,7 +62,7 @@ def generar_y_guardar_vectorstore() -> None:
     print("Vectorstore generado y guardado exitosamente en:", VECTORSTORE_FOLDER)
 
 def consulta_contrato(question: str, history: List[dict]) -> str:
-    """Ejecuta una Cadena RAG estricta para garantizar que el bot no invente respuestas."""
+    """Ejecuta una consulta estricta con LangGraph para garantizar que el bot no invente respuestas."""
     
     # --- 1) CARGAR LA BASE DE DATOS Y CONFIGURAR EL RECUPERADOR ---
     embeddings = OpenAIEmbeddings()
@@ -79,65 +78,45 @@ def consulta_contrato(question: str, history: List[dict]) -> str:
     # Extraemos 6 fragmentos relevantes para tener suficiente contexto
     retriever = db.as_retriever(search_kwargs={"k": 6})
     
-    # Modelo principal configurado con temperatura 0.0 para anular la "creatividad"
+    # --- 2) CONVERTIR EL RECUPERADOR EN UNA HERRAMIENTA ---
+    herramienta_cct = create_retriever_tool(
+        retriever,
+        "buscar_contrato_colectivo",
+        "Usa ESTA herramienta SIEMPRE para buscar sobre derechos, obligaciones o cláusulas del IMSS."
+    )
+    tools = [herramienta_cct]
+
+    # --- 3) PREPARAR EL MODELO Y EL AGENTE ---
     llm = ChatOpenAI(temperature=0.0, model="gpt-4o-mini")
-
-    # --- 2) PREPARAR EL HISTORIAL DE CHAT ---
-    chat_history = []
-    for msg in history:
-        # Asegurarnos de no procesar la última pregunta como parte del historial previo
-        if msg.get("content") == question:
-            continue
-            
-        if msg.get("role") == "user":
-            chat_history.append(HumanMessage(content=msg.get("content", "")))
-        elif msg.get("role") == "assistant":
-            chat_history.append(AIMessage(content=msg.get("content", "")))
-
-    # --- 3) CADENA PARA REFORMULAR LA PREGUNTA (CON HISTORIAL) ---
-    contextualize_q_system_prompt = (
-        "Dado el historial de chat y la última pregunta del usuario, "
-        "que podría hacer referencia a contexto previo, formula una pregunta independiente "
-        "que se entienda por sí sola sin el historial. NO respondas a la pregunta, "
-        "solo reformúlala o devuélvela tal cual si no necesita cambios."
-    )
-    contextualize_q_prompt = ChatPromptTemplate.from_messages([
-        ("system", contextualize_q_system_prompt),
-        MessagesPlaceholder("chat_history"),
-        ("human", "{input}"),
-    ])
-    history_aware_retriever = create_history_aware_retriever(
-        llm, retriever, contextualize_q_prompt
-    )
+    agent_executor = create_react_agent(llm, tools)
 
     # --- 4) PROMPT DEL SISTEMA ULTRA-ESTRICTO ---
-    qa_system_prompt = """Eres un asesor legal laboral experto en el Contrato Colectivo de Trabajo (CCT) del IMSS y sus reglamentos.
+    system_message = """Eres un asesor legal laboral experto en el Contrato Colectivo de Trabajo (CCT) del IMSS y sus reglamentos.
 Tu objetivo es ayudar a los trabajadores respondiendo sus dudas de forma clara, precisa y directa.
 
 REGLAS ESTRICTAS E INQUEBRANTABLES:
-1. CERO INVENTOS: Tu respuesta debe basarse ÚNICA Y EXCLUSIVAMENTE en el contexto recuperado que se te proporciona más abajo. No uses tu conocimiento general de internet ni asumas nada.
-2. MANEJO DE VACÍOS: Si el contexto proporcionado no contiene la respuesta exacta a la pregunta, TIENES PROHIBIDO inventar, deducir o suponer. Debes responder textualmente: «No encontré la referencia exacta para esta consulta en los documentos del CCT.»
-3. CITAS PRECISAS: Siempre que fundamentes tu respuesta, cita la fuente indicando la cláusula, artículo o sección que aparece en el contexto (ej. "De acuerdo con la Cláusula X...").
-4. FORMATO Y TONO: Responde de forma concisa. Usa un máximo de tres viñetas o ideas breves en un lenguaje accesible. Mantén un tono profesional, empático e institucional.
+1. CERO INVENTOS: Tu respuesta debe basarse ÚNICA Y EXCLUSIVAMENTE en la información obtenida al usar la herramienta 'buscar_contrato_colectivo'. No uses tu conocimiento general ni asumas nada.
+2. MANEJO DE VACÍOS: Si la herramienta no devuelve información útil para la pregunta, TIENES PROHIBIDO inventar o deducir. Responde textualmente: «No encontré la referencia exacta para esta consulta en los documentos del CCT.»
+3. CITAS PRECISAS: Siempre que fundamentes tu respuesta, cita la fuente indicando la cláusula, artículo o sección (ej. "De acuerdo con la Cláusula X...").
+4. FORMATO Y TONO: Responde de forma concisa. Usa un máximo de tres viñetas o ideas breves en un lenguaje accesible. Mantén un tono profesional, empático e institucional."""
 
-CONTEXTO RECUPERADO DE LOS DOCUMENTOS:
-{context}"""
+    # --- 5) CONSTRUIR EL HISTORIAL PARA EL AGENTE ---
+    mensajes_finales = [SystemMessage(content=system_message)]
+    
+    for msg in history:
+        if msg.get("content") == question:
+            continue
+        if msg.get("role") == "user":
+            mensajes_finales.append(HumanMessage(content=msg.get("content", "")))
+        elif msg.get("role") == "assistant":
+            mensajes_finales.append(AIMessage(content=msg.get("content", "")))
 
-    qa_prompt = ChatPromptTemplate.from_messages([
-        ("system", qa_system_prompt),
-        MessagesPlaceholder("chat_history"),
-        ("human", "{input}"),
-    ])
+    # Añadir la pregunta actual al final
+    mensajes_finales.append(HumanMessage(content=question))
 
-    # --- 5) CREAR Y EJECUTAR LA CADENA RAG COMPLETA ---
-    question_answer_chain = create_stuff_documents_chain(llm, qa_prompt)
-    rag_chain = create_retrieval_chain(history_aware_retriever, question_answer_chain)
-
+    # --- 6) EJECUCIÓN DEL AGENTE ---
     try:
-        resultado = rag_chain.invoke({
-            "input": question,
-            "chat_history": chat_history
-        })
-        return resultado["answer"]
+        resultado = agent_executor.invoke({"messages": mensajes_finales})
+        return resultado["messages"][-1].content
     except Exception as e:
         return f"Lo siento, hubo un problema al consultar los documentos: {str(e)}"
