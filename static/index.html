@@ -2,294 +2,213 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <title>TrascendencIA Sindical</title>
+  
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/bold/style.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/duotone/style.css" />
+
   <style>
     :root {
-      --bg-base: #0a0f1d;
-      --bg-gradient: radial-gradient(60vmax 60vmax at 50% 40%, rgba(96, 165, 250, .18), transparent 60%),
-                      linear-gradient(180deg, #071122, #0a0f1d);
-      --fg: #e5f2ff;
-      --panel: rgba(9, 14, 26, 0.7);
-      --panel-border: rgba(91, 215, 242, 0.25);
-      --panel-glow: 0 0 0 1px rgba(91, 215, 242, 0.22), 0 20px 45px rgba(3, 10, 20, 0.7);
-      --header-gradient: linear-gradient(90deg, rgba(91, 215, 242, .75), rgba(96, 165, 250, .55));
-      --bot-bg: rgba(11, 28, 50, 0.92);
-      --user-bg: linear-gradient(135deg, rgba(96, 165, 250, 0.95), rgba(91, 215, 242, 0.9));
-      --input-bg: rgba(5, 14, 26, 0.85);
-      --border: rgba(91, 215, 242, 0.2);
-      --accent: #5bd7f2;
-      --accent-soft: rgba(91, 215, 242, 0.2);
-      --grid-line: rgba(96, 165, 250, 0.1);
-      --avatar-user: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='1' y1='0' y2='1'%3E%3Cstop stop-color='%2360a5fa'/%3E%3Cstop offset='1' stop-color='%235bd7f2'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='20' fill='url(%23g)'/%3E%3Cpath fill='white' fill-opacity='0.9' d='M32 36c6.3 0 11.4-5.1 11.4-11.4S38.3 13.2 32 13.2 20.6 18.3 20.6 24.6 25.7 36 32 36zm0 4.8c-8.6 0-16.3 4.3-20.6 10.9-.5.8 0 2 1 2h39.2c1 0 1.6-1.2 1-2-4.3-6.6-12-10.9-20.6-10.9z'/%3E%3C/svg%3E");
-      --avatar-bot: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='1' y1='0' y2='1'%3E%3Cstop stop-color='%230f172a'/%3E%3Cstop offset='1' stop-color='%23254869'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='20' fill='url(%23g)'/%3E%3Cpath fill='%235bd7f2' d='M22 22h20c3.3 0 6 2.7 6 6v12c0 3.3-2.7 6-6 6H22c-3.3 0-6-2.7-6-6V28c0-3.3 2.7-6 6-6z'/%3E%3Ccircle cx='26' cy='34' r='3' fill='%23ffffff'/%3E%3Ccircle cx='38' cy='34' r='3' fill='%23ffffff'/%3E%3Cpath d='M26 18l2-6h8l2 6' stroke='%235bd7f2' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
-      --font-main: 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+      /* Paleta de la Plataforma Sindical Digital */
+      --bg-body: #1b2e45; 
+      --panel-base: 46, 79, 119;
+      --primary: #4da1a8; 
+      --primary-light: #7ad1d6;
+      --text-main: #f0fdfa; 
+      --text-muted: #bce9eb;
+      --ring: rgba(77, 161, 168, .35);
+      --font-main: 'Inter', sans-serif;
     }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    
     body {
-      min-height: 100vh;
-      background: var(--bg-gradient);
-      color: var(--fg);
+      background-color: transparent; /* El fondo lo pone el iframe contenedor */
+      color: var(--text-main);
       font-family: var(--font-main);
       display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 2.5rem 1.5rem;
-      overflow: hidden;
-    }
-    body::before {
-      content: "";
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      opacity: 0.25;
-      background-image: linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
-                        linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
-      background-size: 48px 48px;
-    }
-    #app {
-      width: min(960px, 100%);
-      height: min(720px, calc(100vh - 4rem));
-      display: flex;
       flex-direction: column;
-      background: var(--panel);
-      border-radius: 26px;
-      border: 1px solid var(--panel-border);
-      box-shadow: var(--panel-glow);
-      backdrop-filter: blur(20px);
+      height: 100vh;
       overflow: hidden;
-      position: relative;
-    }
-    #app::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      border-radius: inherit;
-      border: 1px solid rgba(91, 215, 242, 0.12);
-      mix-blend-mode: screen;
     }
 
-    /* Header */
-    header {
-      padding: 1.25rem 1.75rem 1rem;
-      border-bottom: 1px solid var(--accent-soft);
-      background: linear-gradient(180deg, rgba(9, 14, 26, 0.85), rgba(9, 14, 26, 0.55));
-      backdrop-filter: blur(10px);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      position: relative;
-      gap: 1.5rem;
-    }
-    header::after {
-      content: "";
-      position: absolute;
-      inset: auto 1.75rem -1px;
-      height: 3px;
-      border-radius: 999px;
-      background: var(--header-gradient);
-      opacity: 0.9;
-    }
-    .header-left {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
+    /* Ocultamos scrollbars para un look más nativo */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(77, 161, 168, 0.3);
+      border-radius: 10px;
     }
 
-    .title {
-      font-size: 1.15rem;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 0.6rem;
-    }
-    .title::before {
-      content: "";
-      width: 12px;
-      height: 12px;
-      border-radius: 6px;
-      background: linear-gradient(135deg, rgba(96, 165, 250, 0.9), rgba(91, 215, 242, 0.8));
-      box-shadow: 0 0 12px rgba(91, 215, 242, 0.65);
-    }
-
-    /* Botón Volver (glassmórfico) */
-    .back-button{
-      display:inline-flex;
-      align-items:center;
-      gap:.4rem;
-      padding:.55rem 1.1rem;
-      border-radius:999px;
-      border:1px solid rgba(91,215,242,.3);
-      background:rgba(9,14,26,.6);
-      color:var(--accent);
-      text-decoration:none;
-      font-size:.9rem;
-      letter-spacing:.04em;
-      transition:transform .2s ease, box-shadow .2s ease, border-color .2s ease;
-      box-shadow:0 12px 28px rgba(7, 19, 34, .55);
-    }
-    .back-button::before{ content:'←'; font-size:1rem; }
-    .back-button:hover{
-      transform:translateY(-1px);
-      border-color:rgba(91,215,242,.6);
-      box-shadow:0 18px 32px rgba(91,215,242,.3);
-    }
-    .back-button:active{ transform:translateY(0); }
-
-    .subtitle {
-      font-size: 0.9rem;
-      opacity: 0.8;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-    }
-
-    /* Chat */
+    /* Contenedor del Chat */
     #chat-container {
       flex: 1;
       overflow-y: auto;
-      padding: 1.5rem 2rem;
+      padding: 16px;
       display: flex;
       flex-direction: column;
-      gap: 1rem;
+      gap: 16px;
+      scroll-behavior: smooth;
     }
-    #chat-container::-webkit-scrollbar { width: 8px; }
-    #chat-container::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.04); }
-    #chat-container::-webkit-scrollbar-thumb {
-      background: linear-gradient(180deg, rgba(0, 224, 255, 0.45), rgba(0, 112, 255, 0.4));
-      border-radius: 999px;
-    }
+
     .message {
       display: flex;
-      align-items: flex-start;
-      margin-bottom: 1rem;
-      max-width: 80%;
-    }
-    .message.user { margin-left: auto; flex-direction: row-reverse; }
-    .avatar {
-      width: 36px;
-      height: 36px;
-      border-radius: 14px;
-      margin: 0 0.5rem;
-      flex-shrink: 0;
-      background-size: cover;
-      background-position: center;
-      border: 1px solid rgba(91, 215, 242, 0.35);
-      box-shadow: 0 10px 18px rgba(2, 10, 20, 0.5);
-    }
-    .avatar.bot { background-image: var(--avatar-bot); }
-    .avatar.user { background-image: var(--avatar-user); }
-    .bubble {
-      position: relative;
-      padding: 0.9rem 1.2rem;
-      border-radius: 1.1rem;
-      line-height: 1.5;
-      border: 1px solid transparent;
-      box-shadow: 0 12px 30px rgba(1, 9, 26, 0.55);
-    }
-    .message.user .bubble {
-      background: var(--user-bg);
-      color: #f5fbff;
-      border-bottom-right-radius: 0.25rem;
-      border-color: rgba(91, 215, 242, 0.3);
-      box-shadow: 0 18px 30px rgba(91, 215, 242, 0.25);
-    }
-    .message.bot .bubble {
-      background: var(--bot-bg);
-      color: var(--fg);
-      border-bottom-left-radius: 0.25rem;
-      border-color: rgba(91, 215, 242, 0.18);
-    }
-    .message.user .bubble::after {
-      content: "";
-      position: absolute;
-      right: -8px;
-      bottom: 0;
-      border-top: 8px solid var(--user-bg);
-      border-left: 8px solid transparent;
-    }
-    .message.bot .bubble::before {
-      content: "";
-      position: absolute;
-      left: -8px;
-      bottom: 0;
-      border-top: 8px solid var(--bot-bg);
-      border-right: 8px solid transparent;
+      align-items: flex-end;
+      gap: 8px;
+      max-width: 85%;
+      animation: fadeIn 0.3s ease forwards;
     }
 
-    /* Input */
+    .message.user {
+      margin-left: auto;
+      flex-direction: row-reverse;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Avatares minimizados con Iconos */
+    .avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 16px;
+    }
+
+    .avatar.bot {
+      background: rgba(var(--panel-base), 0.8);
+      color: var(--primary-light);
+      border: 1px solid var(--ring);
+    }
+
+    .avatar.user {
+      background: var(--primary);
+      color: var(--bg-body);
+    }
+
+    /* Burbujas de chat */
+    .bubble {
+      padding: 10px 14px;
+      font-size: 14px;
+      line-height: 1.5;
+      word-wrap: break-word;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    .message.bot .bubble {
+      background: rgba(var(--panel-base), 0.4);
+      border: 1px solid var(--ring);
+      color: var(--text-main);
+      border-radius: 16px 16px 16px 4px;
+    }
+
+    .message.user .bubble {
+      background: var(--primary);
+      color: var(--bg-body);
+      border-radius: 16px 16px 4px 16px;
+      font-weight: 500;
+    }
+
+    /* Área de Entrada */
     #input-area {
       display: flex;
-      border-top: 1px solid var(--border);
-      background: var(--input-bg);
-      padding: 0.75rem 0.75rem 1.25rem;
-      gap: 0.75rem;
-    }
-    #texto {
-      flex: 1;
-      padding: 0.85rem 1rem;
-      background: rgba(7, 18, 34, 0.7);
-      color: var(--fg);
-      border: 1px solid rgba(91, 215, 242, 0.24);
-      outline: none;
-      font-size: 1rem;
-      border-radius: 999px;
-      transition: border-color .25s, box-shadow .25s;
-    }
-    #enviar {
-      background: var(--user-bg);
-      border: none;
-      color: #fff;
-      padding: 0 1.8rem;
-      cursor: pointer;
-      font-size: 1rem;
-      border-radius: 999px;
-      transition: transform .2s, box-shadow .2s, filter .2s;
-      box-shadow: 0 12px 25px rgba(91, 215, 242, 0.35);
-    }
-    #enviar:hover:not(:disabled) {
-      filter: brightness(1.1);
-      transform: translateY(-1px);
-      box-shadow: 0 18px 30px rgba(91, 215, 242, 0.45);
-    }
-    #enviar:disabled { opacity: 0.5; cursor: not-allowed; }
-    #texto:focus {
-      border-color: rgba(91, 215, 242, 0.55);
-      box-shadow: 0 0 0 3px rgba(91, 215, 242, 0.12);
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      background: rgba(21, 35, 54, 0.95);
+      border-top: 1px solid var(--ring);
     }
 
-    /* Responsive */
-    @media (max-width: 768px) {
-      body { padding: 1.5rem 1rem; }
-      #app { height: calc(100vh - 3rem); border-radius: 20px; }
-      header { padding: 1rem 1.25rem 0.9rem; flex-direction: column; align-items: stretch; gap: 1rem; }
-      .header-left { flex-direction: column; align-items: flex-start; gap: 0.75rem; width: 100%; }
-      .subtitle { align-self: flex-end; }
-      .back-button { width: 100%; justify-content: center; }
-      #chat-container { padding: 1.25rem; }
-      #input-area { flex-direction: column; padding: 0.75rem 1rem 1.1rem; }
-      #enviar { width: 100%; padding: 0.95rem; }
+    #texto {
+      flex: 1;
+      padding: 10px 16px;
+      background: rgba(10, 20, 29, 0.8);
+      color: var(--text-main);
+      border: 1px solid var(--ring);
+      outline: none;
+      font-size: 14px;
+      border-radius: 24px;
+      font-family: var(--font-main);
+      transition: all 0.2s ease;
+    }
+
+    #texto:focus {
+      border-color: var(--primary-light);
+      box-shadow: 0 0 0 3px rgba(77, 161, 168, 0.2);
+    }
+
+    #texto::placeholder {
+      color: rgba(188, 233, 235, 0.5);
+    }
+
+    #enviar {
+      background: var(--primary);
+      color: var(--bg-body);
+      border: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 10px rgba(77, 161, 168, 0.3);
+    }
+
+    #enviar:hover:not(:disabled) {
+      background: var(--primary-light);
+      transform: scale(1.05);
+    }
+
+    #enviar:disabled {
+      background: rgba(77, 161, 168, 0.3);
+      color: rgba(21, 35, 54, 0.5);
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    /* Indicador de escritura (opcional) */
+    .typing-indicator {
+      display: flex;
+      gap: 4px;
+      padding: 4px 8px;
+    }
+    .dot {
+      width: 6px;
+      height: 6px;
+      background: var(--primary-light);
+      border-radius: 50%;
+      animation: bounce 1.4s infinite ease-in-out both;
+    }
+    .dot:nth-child(1) { animation-delay: -0.32s; }
+    .dot:nth-child(2) { animation-delay: -0.16s; }
+    @keyframes bounce {
+      0%, 80%, 100% { transform: scale(0); }
+      40% { transform: scale(1); }
     }
   </style>
 </head>
 <body>
-  <div id="app">
-    <header>
-      <div class="header-left">
-        <a class="back-button" href="https://chronosbvrx.github.io/InnovacionSindical/">Volver</a>
-        <div class="title">TrascendencIA Sindical</div>
-      </div>
-      <div class="subtitle">Innovación Sindical</div>
-    </header>
 
-    <div id="chat-container"></div>
+  <div id="chat-container"></div>
 
-    <div id="input-area">
-      <input id="texto" placeholder="Escribe tu consulta..." autocomplete="off"/>
-      <button id="enviar">Enviar</button>
-    </div>
+  <div id="input-area">
+    <input type="text" id="texto" placeholder="Escribe tu duda del CCT..." autocomplete="off"/>
+    <button id="enviar" title="Enviar mensaje">
+      <i class="ph-bold ph-paper-plane-right"></i>
+    </button>
   </div>
 
   <script>
@@ -298,27 +217,67 @@
     const btnEl  = document.getElementById('enviar');
     const history = [];
 
+    // Iconos para los avatares usando Phosphor
+    const botIcon = '<i class="ph-duotone ph-robot"></i>';
+    const userIcon = '<i class="ph-bold ph-user"></i>';
+
     function appendMessage(role, text) {
       const msg = document.createElement('div');
       msg.className = `message ${role}`;
+      
       const avatar = document.createElement('div');
       avatar.className = `avatar ${role}`;
-      avatar.setAttribute('aria-hidden', 'true');
+      avatar.innerHTML = role === 'bot' ? botIcon : userIcon;
+      
       const bubble = document.createElement('div');
       bubble.className = 'bubble';
-      bubble.textContent = text;
+      bubble.textContent = text; // Mantiene seguridad contra inyecciones HTML
+      
       msg.append(role === 'bot' ? avatar : '', bubble, role === 'user' ? avatar : '');
       chatEl.appendChild(msg);
+      scrollToBottom();
+    }
+
+    function appendTypingIndicator() {
+      const msg = document.createElement('div');
+      msg.className = `message bot`;
+      msg.id = 'typing-indicator';
+      
+      const avatar = document.createElement('div');
+      avatar.className = `avatar bot`;
+      avatar.innerHTML = botIcon;
+      
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble';
+      bubble.innerHTML = '<div class="typing-indicator"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>';
+      
+      msg.append(avatar, bubble);
+      chatEl.appendChild(msg);
+      scrollToBottom();
+    }
+
+    function removeTypingIndicator() {
+      const indicator = document.getElementById('typing-indicator');
+      if (indicator) {
+        indicator.remove();
+      }
+    }
+
+    function scrollToBottom() {
       chatEl.scrollTop = chatEl.scrollHeight;
     }
 
     btnEl.onclick = async () => {
       const pregunta = txtEl.value.trim();
       if (!pregunta) return;
+      
       history.push({ role: 'user', content: pregunta });
       appendMessage('user', pregunta);
+      
       txtEl.value = '';
       btnEl.disabled = true;
+      
+      appendTypingIndicator();
 
       try {
         const res = await fetch("/consulta", {
@@ -326,13 +285,18 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ history })
         });
+        
         const data = await res.json();
+        removeTypingIndicator();
+        
         const reply = data.respuesta || data.error;
         history.push({ role: 'assistant', content: reply });
         appendMessage('bot', reply);
       } catch (err) {
-        appendMessage('bot', `❌ Error de conexión: ${err.message}`);
+        removeTypingIndicator();
+        appendMessage('bot', `❌ Error de conexión: No se pudo enlazar con la base de datos sindical. Intenta nuevamente.`);
       }
+      
       btnEl.disabled = false;
       txtEl.focus();
     };
@@ -341,9 +305,9 @@
       if (e.key === 'Enter') btnEl.click();
     });
 
-    // Saludo inicial
+    // Saludo inicial automático
     window.addEventListener('load', () => {
-      const welcome = '¡Hola! 👋 Soy tu asistente experto en tu Contrato Colectivo del IMSS. ¿En qué puedo ayudarte hoy?';
+      const welcome = '¡Hola, Compañero! 👋 Soy TrascendencIA. Estoy listo para orientarte con cualquier duda sobre los estatutos y el Contrato Colectivo de Trabajo.';
       appendMessage('bot', welcome);
       history.push({ role: 'assistant', content: welcome });
     });
