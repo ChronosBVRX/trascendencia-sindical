@@ -2,7 +2,7 @@ import os
 import re
 from typing import List, Literal
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -17,7 +17,7 @@ VECTORSTORE_DIR  = os.path.join(BASE, "vectorstore")
 VECTORSTORE_PATH = os.path.join(VECTORSTORE_DIR, "index.faiss")
 PICKLE_PATH      = os.path.join(VECTORSTORE_DIR, "index.pkl")
 
-# --- MANEJO MODERNO DEL INICIO DE LA APP ---
+# --- MANEJO DEL CICLO DE VIDA ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Se ejecuta al arrancar el servidor
@@ -25,9 +25,32 @@ async def lifespan(app: FastAPI):
         print("Vectorstore no encontrado. Generando uno nuevo a partir de los PDFs...")
         generar_y_guardar_vectorstore()
     yield
-    # Aquí iría el código de apagado si en el futuro necesitas limpiar recursos
+    # Código de apagado si fuera necesario
 
 app = FastAPI(lifespan=lifespan)
+
+# --- MIDDLEWARE DE SEGURIDAD PARA IFRAME (MODIFICADO) ---
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    
+    # Eliminamos restricciones rígidas que bloquean el iframe
+    if "x-frame-options" in response.headers:
+        del response.headers["x-frame-options"]
+    
+    # Autorizamos específicamente tu dominio principal y el de respaldo
+    csp_policy = (
+        "frame-ancestors 'self' "
+        "https://innovacionsindical.com.mx "
+        "https://www.innovacionsindical.com.mx "
+        "https://chronosbvrx.github.io;"
+    )
+    
+    response.headers["Content-Security-Policy"] = csp_policy
+    
+    return response
+
+# --- CONFIGURACIÓN DE ARCHIVOS Y RUTAS ---
 
 # Monta estáticos en /static
 app.mount(
@@ -41,10 +64,12 @@ app.mount(
 async def index():
     return FileResponse(os.path.join(BASE, "static", "index.html"))
 
-# HEAD / → también sirve index.html para no 405
+# HEAD / → evita errores 405 en pings de monitoreo
 @app.head("/")
 async def head_index():
     return FileResponse(os.path.join(BASE, "static", "index.html"))
+
+# --- LÓGICA DE CONSULTA ---
 
 # Esquema de mensajes para el historial
 class Message(BaseModel):
@@ -83,10 +108,10 @@ async def endpoint_consulta(req: ConsultaRequest):
         return {"respuesta": "❗ No pude encontrar tu pregunta en el historial."}
 
     try:
-        # Pasa el historial convertido a diccionarios usando el método moderno de Pydantic
+        # Conversión de historial usando model_dump (Pydantic v2)
         historial_dicts = [h.model_dump() if hasattr(h, 'model_dump') else h.dict() for h in history]
         
-        # Llama a la cadena RAG estricta
+        # Llama a la cadena RAG configurada en tu embedding_service
         respuesta = consulta_contrato(question, historial_dicts)
         return {"respuesta": respuesta}
         
