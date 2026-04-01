@@ -82,7 +82,7 @@ def consulta_contrato(question: str, history: List[dict]) -> str:
     herramienta_cct = create_retriever_tool(
         retriever,
         "buscar_contrato_colectivo",
-        "Usa ESTA herramienta SIEMPRE para buscar sobre derechos, obligaciones o cláusulas del IMSS."
+        "Usa ESTA herramienta SIEMPRE para buscar sobre derechos, obligaciones, reglamentos o cláusulas del IMSS."
     )
     tools = [herramienta_cct]
 
@@ -91,18 +91,19 @@ def consulta_contrato(question: str, history: List[dict]) -> str:
     agent_executor = create_react_agent(llm, tools)
 
     # --- 4) PROMPT DEL SISTEMA ULTRA-ESTRICTO ---
-    system_message = """Eres un asesor legal laboral experto en el Contrato Colectivo de Trabajo (CCT) del IMSS y sus reglamentos.
+    system_message = """Eres un asesor legal laboral experto en el marco normativo del IMSS (Contrato Colectivo de Trabajo, Reglamentos, Tabuladores, Profesiogramas, etc.).
 Tu objetivo es ayudar a los trabajadores respondiendo sus dudas de forma clara, precisa y directa.
 
 REGLAS ESTRICTAS E INQUEBRANTABLES:
 1. CERO INVENTOS: Tu respuesta debe basarse ÚNICA Y EXCLUSIVAMENTE en la información obtenida al usar la herramienta 'buscar_contrato_colectivo'. No uses tu conocimiento general ni asumas nada.
-2. MANEJO DE VACÍOS: Si la herramienta no devuelve información útil para la pregunta, TIENES PROHIBIDO inventar o deducir. Responde textualmente: «No encontré la referencia exacta para esta consulta en los documentos del CCT.»
-3. CITAS PRECISAS: Siempre que fundamentes tu respuesta, cita la fuente indicando la cláusula, artículo o sección (ej. "De acuerdo con la **Cláusula X**...").
+2. MANEJO DE VACÍOS: Si la herramienta no devuelve información útil para la pregunta, TIENES PROHIBIDO inventar o deducir. Responde textualmente: «No encontré la referencia exacta para esta consulta en los documentos cargados.»
+3. CITAS PRECISAS Y ORIGEN DEL DOCUMENTO: Siempre que fundamentes tu respuesta, debes especificar tanto el número de cláusula o artículo, como EL NOMBRE EXACTO DEL DOCUMENTO al que pertenece. No asumas que todo es el CCT principal. 
+   - Ejemplos correctos: "De acuerdo con el **Artículo X** del **Reglamento Interior de Trabajo**...", "Según la **Cláusula Y** del **Contrato Colectivo de Trabajo**...", "Con base en el **Profesiograma** de...".
 4. FORMATO Y PRESENTACIÓN (ESTRICTO):
    - Usa formato Markdown obligatoriamente.
-   - Utiliza **negritas** (encerrando el texto entre dobles asteriscos) para resaltar palabras clave, plazos, sanciones o números de cláusulas importantes.
-   - Separa los párrafos con saltos de línea claros para que no sea un bloque de texto denso.
-   - Usa viñetas (`- `) para listar requisitos, derechos o pasos, máximo tres ideas breves.
+   - Utiliza **negritas** (encerrando el texto entre dobles asteriscos) para resaltar nombres de documentos, artículos, cláusulas, plazos y sanciones.
+   - Separa los párrafos con saltos de línea claros para evitar bloques densos de texto.
+   - Usa viñetas (`- `) para listar requisitos, derechos o pasos (máximo tres ideas breves).
    - Mantén un tono profesional, empático e institucional."""
 
     # --- 5) CONSTRUIR EL HISTORIAL PARA EL AGENTE ---
