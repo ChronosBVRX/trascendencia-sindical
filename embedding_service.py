@@ -8,7 +8,7 @@ from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_community.vectorstores import FAISS
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 
-# --- IMPORTACIONES MODERNAS (Adiós a langchain.chains) ---
+# --- IMPORTACIONES MODERNAS ---
 from langchain_core.tools import create_retriever_tool
 from langgraph.prebuilt import create_react_agent
 
@@ -47,8 +47,8 @@ def generar_y_guardar_vectorstore() -> None:
         print("No se encontraron PDFs o están vacíos. No se generará el vectorstore.")
         return
 
-    # Dividimos el texto en fragmentos manejables con un poco de superposición para no cortar ideas
-    splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+    # AUMENTADO: Un poco más de tamaño y overlap para no cortar cláusulas largas a la mitad
+    splitter = RecursiveCharacterTextSplitter(chunk_size=1500, chunk_overlap=300)
     docs = []
     for t in textos:
         docs.extend(splitter.create_documents([t]))
@@ -75,35 +75,37 @@ def consulta_contrato(question: str, history: List[dict]) -> str:
     except Exception:
         return "⚠️ Error: No se encontró la base de datos de documentos. Por favor, reinicia la aplicación para generarla."
         
-    # Extraemos 6 fragmentos relevantes para tener suficiente contexto
-    retriever = db.as_retriever(search_kwargs={"k": 6})
+    # MEJORA: Uso de MMR para traer fragmentos diversos (no solo los más similares entre sí)
+    retriever = db.as_retriever(search_type="mmr", search_kwargs={"k": 6, "fetch_k": 20})
     
     # --- 2) CONVERTIR EL RECUPERADOR EN UNA HERRAMIENTA ---
+    # MEJORA: Instrucciones más claras para forzar al LLM a usar la herramienta
     herramienta_cct = create_retriever_tool(
         retriever,
         "buscar_contrato_colectivo",
-        "Usa ESTA herramienta SIEMPRE para buscar sobre derechos, obligaciones, reglamentos o cláusulas del IMSS."
+        "Usa ESTA herramienta SIEMPRE para buscar sobre: vacaciones, aguinaldo, despidos, incapacidades, sindicato, permisos, horarios, salarios y cualquier derecho u obligación del IMSS. Si la pregunta es laboral, DEBES usarla."
     )
     tools = [herramienta_cct]
 
-    # --- 3) PREPARAR EL MODELO Y EL AGENTE ---
+    # Mantenemos temperatura en 0.0 para evitar alucinaciones
     llm = ChatOpenAI(temperature=0.0, model="gpt-4o-mini")
     agent_executor = create_react_agent(llm, tools)
 
-    # --- 4) PROMPT DEL SISTEMA ULTRA-ESTRICTO ---
+    # --- 4) PROMPT DEL SISTEMA ANTI-ALUCINACIONES Y FLEXIBLE ---
     system_message = """Eres un asesor legal laboral experto en el marco normativo del IMSS (Contrato Colectivo de Trabajo, Reglamentos, Tabuladores, Profesiogramas, etc.).
 Tu objetivo es ayudar a los trabajadores respondiendo sus dudas de forma clara, precisa y directa.
 
-REGLAS ESTRICTAS E INQUEBRANTABLES:
-1. CERO INVENTOS: Tu respuesta debe basarse ÚNICA Y EXCLUSIVAMENTE en la información obtenida al usar la herramienta 'buscar_contrato_colectivo'. No uses tu conocimiento general ni asumas nada.
-2. MANEJO DE VACÍOS: Si la herramienta no devuelve información útil para la pregunta, TIENES PROHIBIDO inventar o deducir. Responde textualmente: «No encontré la referencia exacta para esta consulta en los documentos cargados.»
-3. CITAS PRECISAS Y ORIGEN DEL DOCUMENTO: Siempre que fundamentes tu respuesta, debes especificar tanto el número de cláusula o artículo, como EL NOMBRE EXACTO DEL DOCUMENTO al que pertenece. No asumas que todo es el CCT principal. 
-   - Ejemplos correctos: "De acuerdo con el **Artículo X** del **Reglamento Interior de Trabajo**...", "Según la **Cláusula Y** del **Contrato Colectivo de Trabajo**...", "Con base en el **Profesiograma** de...".
-4. FORMATO Y PRESENTACIÓN (ESTRICTO):
+REGLAS ESTRICTAS E INQUEBRANTABLES (CERO ALUCINACIONES):
+1. FUENTE EXCLUSIVA: Tu respuesta debe basarse ÚNICA Y EXCLUSIVAMENTE en el texto recuperado al usar la herramienta 'buscar_contrato_colectivo'. Tienes ESTRICTAMENTE PROHIBIDO usar tu conocimiento general o inventar información.
+2. MANEJO DE VACÍOS (RESPUESTAS SEGURAS): 
+   - Si la herramienta devuelve información que responde parcialmente a la pregunta, entrégala aclarando que es la única referencia encontrada en los documentos.
+   - Si la herramienta NO devuelve ninguna información relacionada con la pregunta, NO INVENTES NI DEDUZCAS NADA. Responde exactamente: «No encontré la referencia exacta en los documentos cargados. ¿Podrías darme más detalles o usar el término técnico exacto de lo que buscas?».
+3. CITAS PRECISAS Y ORIGEN: Siempre que fundamentes tu respuesta, debes especificar el número de cláusula/artículo y EL NOMBRE EXACTO DEL DOCUMENTO al que pertenece (si el fragmento lo indica).
+   - Ejemplos correctos: "De acuerdo con el **Artículo X** del **Reglamento Interior de Trabajo**...", "Según la **Cláusula Y** del **Contrato Colectivo de Trabajo**...".
+4. FORMATO Y PRESENTACIÓN:
    - Usa formato Markdown obligatoriamente.
-   - Utiliza **negritas** (encerrando el texto entre dobles asteriscos) para resaltar nombres de documentos, artículos, cláusulas, plazos y sanciones.
-   - Separa los párrafos con saltos de línea claros para evitar bloques densos de texto.
-   - Usa viñetas (`- `) para listar requisitos, derechos o pasos (máximo tres ideas breves).
+   - Utiliza **negritas** para resaltar nombres de documentos, artículos, cláusulas, plazos y sanciones.
+   - Usa viñetas (`- `) para listar requisitos, derechos o pasos.
    - Mantén un tono profesional, empático e institucional."""
 
     # --- 5) CONSTRUIR EL HISTORIAL PARA EL AGENTE ---
