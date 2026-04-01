@@ -10,6 +10,8 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/bold/style.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/duotone/style.css" />
 
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
   <style>
     :root {
       /* Paleta de la Plataforma Sindical Digital */
@@ -118,6 +120,24 @@
       font-weight: 500;
     }
 
+    /* ESTILOS PARA EL TEXTO PROCESADO DE LA IA */
+    .message.bot .bubble p {
+      margin-top: 0;
+      margin-bottom: 8px;
+    }
+    .message.bot .bubble p:last-child {
+      margin-bottom: 0;
+    }
+    .message.bot .bubble ul, .message.bot .bubble ol {
+      margin-top: 4px;
+      margin-bottom: 8px;
+      padding-left: 20px;
+    }
+    .message.bot .bubble strong {
+      color: var(--primary-light); /* Resalta las negritas con el color institucional */
+      font-weight: 600;
+    }
+
     /* Área de Entrada */
     #input-area {
       display: flex;
@@ -179,7 +199,7 @@
       box-shadow: none;
     }
 
-    /* Indicador de escritura (opcional) */
+    /* Indicador de escritura */
     .typing-indicator {
       display: flex;
       gap: 4px;
@@ -231,7 +251,14 @@
       
       const bubble = document.createElement('div');
       bubble.className = 'bubble';
-      bubble.textContent = text; // Mantiene seguridad contra inyecciones HTML
+      
+      // MAGIA APLICADA: Si es la IA, convierte el Markdown a HTML. 
+      // Si es el usuario, lo deja como texto plano por seguridad.
+      if (role === 'bot') {
+        bubble.innerHTML = marked.parse(text);
+      } else {
+        bubble.textContent = text; 
+      }
       
       msg.append(role === 'bot' ? avatar : '', bubble, role === 'user' ? avatar : '');
       chatEl.appendChild(msg);
